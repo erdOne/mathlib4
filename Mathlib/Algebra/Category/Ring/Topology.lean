@@ -7,6 +7,7 @@ import Mathlib.Algebra.Category.Ring.Colimits
 import Mathlib.Algebra.Category.Ring.Constructions
 import Mathlib.Algebra.MvPolynomial.CommRing
 import Mathlib.Topology.Algebra.Ring.Basic
+import Mathlib.Topology.Algebra.IsOpenUnits
 
 /-!
 # Topology on `Hom(R, S)`
@@ -99,6 +100,55 @@ lemma isClosedEmbedding_precomp_of_surjective
   · rintro ⟨g, rfl⟩ a ha; simp [ha]
   · exact fun H ↦ ⟨CommRingCat.ofHom (RingHom.liftOfSurjective f.hom hf ⟨x.hom, H⟩),
       by ext; simp [RingHom.liftOfRightInverse_comp_apply]⟩
+
+lemma isEmbedding_precomp_of_isLocalization [ContinuousMul R] [IsOpenUnits R]
+    (f : A ⟶ B) (M : Submonoid A) [letI := f.hom.toAlgebra; IsLocalization M B] :
+    Topology.IsEmbedding ((f ≫ ·) : (B ⟶ R) → (A ⟶ R)) := by
+  letI := f.hom.toAlgebra
+  refine ⟨⟨?_⟩, fun _ _ e ↦ CommRingCat.hom_ext
+    (IsLocalization.ringHom_ext M (congr_arg CommRingCat.Hom.hom e))⟩
+  refine (continuous_precomp f).le_induced.antisymm ?_
+  refine coinduced_le_iff_le_induced.mp (le_iInf fun s ↦ ?_)
+  refine coinduced_le_iff_le_induced.mp ?_
+  rintro (t : Set R) ht
+  obtain ⟨x, a, rfl⟩ := IsLocalization.mk'_surjective M s
+  refine ⟨_, ((IsOpenUnits.isOpenEmbedding_unitsVal (M := R)).isOpenMap.prodMap .id _
+    ((ht.preimage (continuous_mul (M := R)):).preimage (.prodMap Units.continuous_coe_inv
+      continuous_id))).preimage ((continuous_apply a.1).prodMk (continuous_apply x)), ?_⟩
+  ext g
+  simp only [Set.mem_preimage, CommRingCat.hom_comp, RingHom.coe_comp, Function.comp_apply,
+    Set.mem_image, Prod.map_fst, Prod.map_snd, id_eq, Prod.exists, Prod.map_apply, Prod.mk.injEq,
+    exists_eq_right_right]
+  constructor
+  · rintro ⟨u, hu₁, hu₂⟩
+    convert hu₁
+    rw [Units.eq_inv_mul_iff_mul_eq, hu₂, ← map_mul, ← f.hom.algebraMap_toAlgebra,
+      IsLocalization.mk'_spec']
+  · intro H
+    have := (IsLocalization.map_units _ a).unit.map g.hom.toMonoidHom
+    refine ⟨(IsLocalization.map_units _ a).unit.map g.hom.toMonoidHom, ?_, rfl⟩
+    convert H
+    rw [Units.inv_mul_eq_iff_eq_mul]
+    simp only [RingHom.toMonoidHom_eq_coe, Units.coe_map, IsUnit.unit_spec, MonoidHom.coe_coe,
+      ← map_mul, IsLocalization.mk'_spec']
+    rfl
+
+-- true for all f.g. submonoids; generalize if we need it
+lemma isOpenEmbedding_precomp_of_isLocalization [ContinuousMul R] [IsOpenUnits R]
+    (f : A ⟶ B) (r : A) [letI := f.hom.toAlgebra; IsLocalization.Away r B] :
+    Topology.IsOpenEmbedding ((f ≫ ·) : (B ⟶ R) → (A ⟶ R)) := by
+  letI := f.hom.toAlgebra
+  refine ⟨isEmbedding_precomp_of_isLocalization f (.powers r), ?_⟩
+  convert (IsOpenUnits.isOpenEmbedding_unitsVal (M := R)).2.preimage (continuous_apply r)
+  ext g
+  constructor
+  · rintro ⟨g, rfl⟩
+    exact ⟨((IsLocalization.Away.algebraMap_isUnit r).map g.hom).unit, rfl⟩
+  · rintro ⟨u, hu : _ = g.hom _⟩
+    refine ⟨CommRingCat.ofHom (IsLocalization.Away.lift r (g := g.hom) (hu ▸ u.isUnit)), ?_⟩
+    ext x
+    simp only [CommRingCat.hom_comp, RingHom.coe_comp, Function.comp_apply]
+    exact IsLocalization.Away.lift_eq r (g := g.hom) (hu ▸ u.isUnit) x
 
 /-- `Hom(A[Xᵢ], R)` is homeomorphic to `Hom(A, R) × Rⁱ`. -/
 @[simps! apply_fst apply_snd symm_apply_hom]

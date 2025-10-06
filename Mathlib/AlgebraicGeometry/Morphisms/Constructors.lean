@@ -124,6 +124,7 @@ instance HasAffineProperty.diagonal_affineProperty_isLocal
     Q.diagonal.IsLocal where
   respectsIso := inferInstance
   to_basicOpen {_ Y} _ f r hf :=
+    have : IsAffine _ := (isAffineOpen_top Y).basicOpen r
     diagonal_of_diagonal_of_isPullback (targetAffineLocally Q)
       (isPullback_morphismRestrict f (Y.basicOpen r)).flip
       ((diagonal_iff (targetAffineLocally Q)).mp hf)

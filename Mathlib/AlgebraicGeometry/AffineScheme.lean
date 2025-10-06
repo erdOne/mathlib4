@@ -241,7 +241,13 @@ instance createsLimitsForgetToScheme : CreatesLimits forgetToScheme.{u} :=
 
 end AffineScheme
 
-/-- An open subset of a scheme is affine if the open subscheme is affine. -/
+/--
+An open subset of a scheme is affine if the open subscheme is affine as a scheme.
+
+This is deliberately chosen to be semireducible,
+so that it can be used as a regular hypothesis rather than as a typeclass.
+It is discouraged to circumvent this by providing IsAffine (Opens.toScheme _) instances.
+-/
 def IsAffineOpen {X : Scheme} (U : X.Opens) : Prop :=
   IsAffine U
 
@@ -575,9 +581,6 @@ theorem basicOpen :
 lemma Spec_basicOpen {R : CommRingCat} (f : R) :
     IsAffineOpen (X := Spec R) (PrimeSpectrum.basicOpen f) :=
   basicOpen_eq_of_affine f ▸ (isAffineOpen_top Spec(R)).basicOpen _
-
-instance [IsAffine X] (r : Γ(X, ⊤)) : IsAffine (X.basicOpen r) :=
-  (isAffineOpen_top X).basicOpen _
 
 include hU in
 theorem ι_basicOpen_preimage (r : Γ(X, ⊤)) :

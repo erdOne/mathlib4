@@ -405,12 +405,14 @@ class IsLocal (P : AffineTargetMorphismProperty) : Prop where
   respectsIso : P.toProperty.RespectsIso
   /-- `P` is stable under restriction to basic open set of global sections. -/
   to_basicOpen :
-    ∀ {X Y : Scheme} [IsAffine Y] (f : X ⟶ Y) (r : Γ(Y, ⊤)), P f → P (f ∣_ Y.basicOpen r)
+    ∀ {X Y : Scheme} [IsAffine Y] (f : X ⟶ Y) (r : Γ(Y, ⊤)), P f →
+      @P _ _ (f ∣_ Y.basicOpen r) ((isAffineOpen_top Y).basicOpen r)
   /-- `P` for `f` if `P` holds for `f` restricted to basic sets of a spanning set of the global
   sections -/
   of_basicOpenCover :
     ∀ {X Y : Scheme} [IsAffine Y] (f : X ⟶ Y) (s : Finset Γ(Y, ⊤))
-      (_ : Ideal.span (s : Set Γ(Y, ⊤)) = ⊤), (∀ r : s, P (f ∣_ Y.basicOpen r.1)) → P f
+      (_ : Ideal.span (s : Set Γ(Y, ⊤)) = ⊤),
+        (∀ r : s, @P _ _ (f ∣_ Y.basicOpen r.1) ((isAffineOpen_top Y).basicOpen r)) → P f
 
 attribute [instance] AffineTargetMorphismProperty.IsLocal.respectsIso
 

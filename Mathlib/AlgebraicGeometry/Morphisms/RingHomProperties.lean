@@ -550,6 +550,7 @@ private lemma respects_isOpenImmersion_aux
     intro V
     rw [← Category.assoc]
     exact this _ _ (IsLocalAtSource.comp hf _) V.2
+  have : IsAffine _ := (isAffineOpen_top _).basicOpen a
   rw [HasRingHomProperty.iff_of_isAffine (P := P)] at hf ⊢
   exact hQ _ a _ hf
 

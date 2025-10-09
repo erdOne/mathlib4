@@ -1081,7 +1081,7 @@ instance [IsRankLeOne R] : IsRankLeOne S := .of_valuativeExtension R
 instance [IsUnramified S R] [IsDiscrete R] : IsDiscrete S := .of_isUnramified R
 instance [IsUnramified S R] [IsNontrivial R] : IsNontrivial S := .of_isUnramified R
 instance [TopologicalSpace R] [IsValuativeTopology R] : IsValuativeTopology S := by
-  rw []
+  sorry
 
 
 end Subring

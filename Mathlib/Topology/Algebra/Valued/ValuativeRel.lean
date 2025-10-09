@@ -229,4 +229,20 @@ scoped notation "𝓂[" K "]" => IsLocalRing.maximalIdeal 𝒪[K]
 @[inherit_doc]
 scoped notation "𝓀[" K "]" => IsLocalRing.ResidueField 𝒪[K]
 
+lemma mem_integers_iff {R : Type*} [CommRing R] [ValuativeRel R] {x : R} :
+    x ∈ 𝒪[R] ↔ x ≤ᵥ 1 :=
+  (valuation R).rel_one_iff.symm
+
+lemma Subring.isUnit_iff {K : Type*} [Field K] {S : Subring K} {x : S} :
+    IsUnit x ↔ x ≠ 0 ∧ x.1⁻¹ ∈ S := by
+  refine ⟨fun h ↦ ⟨h.ne_zero, ?_⟩, fun ⟨h, h'⟩ ↦ isUnit_of_mul_eq_one _ ⟨_, h'⟩ (by ext; simp [h])⟩
+  have : h.unit⁻¹ = x.1⁻¹ := eq_inv_of_mul_eq_one_left congr($h.unit.inv_mul)
+  exact this ▸ (h.unit⁻¹).1.2
+
+lemma mem_maximalIdeal_iff {K : Type*} [Field K] [ValuativeRel K] {x : 𝒪[K]} :
+    x ∈ 𝓂[K] ↔ x.1 <ᵥ 1 := by
+  refine not_iff_not.mpr ?_
+  rw [Subring.isUnit_iff, ValuativeRel.mem_integers_iff]
+  obtain rfl | hx := eq_or_ne x 0 <;> simp [*, inv_rel_one]
+
 end ValuativeRel

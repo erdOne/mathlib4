@@ -173,6 +173,21 @@ theorem isAdic_iff [top : TopologicalSpace R] [IsTopologicalRing R] {J : Ideal R
 
 variable [TopologicalSpace R] [IsTopologicalRing R]
 
+theorem isAdic_iff_hasBasis_zero {J : Ideal R} :
+    IsAdic J ↔ (𝓝 (0 : R)).HasBasis (fun _ ↦ True) fun n ↦ ↑(J ^ n) := by
+  simp_rw [isAdic_iff, hasBasis_iff, true_and]
+  constructor
+  · intro H t
+    refine ⟨by simpa using H.2 t, ?_⟩
+    rintro ⟨i, hi⟩
+    exact Filter.mem_of_superset ((H.1 i).mem_nhds (by simp)) hi
+  · intro H
+    refine ⟨fun n ↦ ?_, fun s ↦ (H s).1⟩
+    rw [isOpen_iff_mem_nhds]
+    intro x hx
+    rw [← zero_add x, ← map_add_right_nhds, Filter.mem_map, H]
+    exact ⟨n, fun y hy ↦ by aesop⟩
+
 theorem is_ideal_adic_pow {J : Ideal R} (h : IsAdic J) {n : ℕ} (hn : 0 < n) : IsAdic (J ^ n) := by
   rw [isAdic_iff] at h ⊢
   constructor

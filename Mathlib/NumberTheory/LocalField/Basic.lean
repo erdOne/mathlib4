@@ -3,6 +3,7 @@ Copyright (c) 2025 Andrew Yang. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Andrew Yang
 -/
+import Mathlib.RingTheory.AdicCompletion.Topology
 import Mathlib.RingTheory.Valuation.DiscreteValuativeRel
 import Mathlib.Topology.Algebra.Valued.LocallyCompact
 import Mathlib.Topology.Algebra.Valued.ValuativeRel
@@ -46,6 +47,12 @@ class IsNonarchimedeanLocalField
 open ValuativeRel Valued.integer
 
 open scoped WithZero
+
+theorem Irreducible.ne_zero' {K S : Type*} [MonoidWithZero K] [SetLike S K] [SubmonoidClass S K]
+    {s : S} {x : s} (h : Irreducible x) : (x : K) ≠ 0 := by
+  obtain ⟨x, hx⟩ := x
+  rintro rfl
+  exact h.1 ((or_self _).mp (h.2 (a := ⟨0, hx⟩) (b := ⟨0, hx⟩) (by ext; simp)))
 
 namespace IsNonarchimedeanLocalField
 
@@ -131,7 +138,78 @@ instance : Finite 𝓀[K] :=
   (compactSpace_iff_completeSpace_and_isDiscreteValuationRing_and_finite_residueField.mp
     (inferInstanceAs (CompactSpace 𝒪[K]))).2.2
 
+instance : T2Space K :=
+  letI := IsTopologicalAddGroup.toUniformSpace K
+  haveI := isUniformAddGroup_of_addCommGroup (G := K)
+  open scoped Valued in inferInstance
+
+lemma valuation_eq_uniformizer {ϖ : 𝒪[K]} (hϖ : Irreducible ϖ) :
+    valuation K ϖ = uniformizer K := by
+  apply le_antisymm
+  · rw [le_uniformizer_iff, ← (valuation K).srel_one_iff, ← mem_maximalIdeal_iff,
+      IsLocalRing.mem_maximalIdeal]
+    exact hϖ.not_isUnit
+  · obtain ⟨x, hx⟩ := valuation_surjective (uniformizer K)
+
+
+    have := IsDiscreteValuationRing.irreducible_iff_uniformizer
+
+
+lemma mem_maximalIdeal_pow {x : 𝒪[K]} {n : ℕ} :
+    x ∈ 𝓂[K] ^ n ↔ valuation K x ≤ uniformizer K ^ n := by
+  constructor
+  · intro hx
+    induction n generalizing x with
+    | zero =>
+      simp_rw [pow_zero, ← (valuation K).map_one, ← (valuation K).rel_iff_le, ← mem_integers_iff]
+      exact x.2
+    | succ n IH =>
+      rw [pow_succ] at hx
+      refine Submodule.mul_induction_on hx (fun y hy z hz ↦ ?_) (fun y z ↦ Valuation.map_add_le _)
+      rw [Subring.coe_mul, map_mul, pow_succ]
+      rw [mem_maximalIdeal_iff, (valuation K).srel_one_iff, ← le_uniformizer_iff] at hz
+      exact mul_le_mul (IH hy) hz zero_le' zero_le'
+  · intro hx
+    obtain ⟨y, hy⟩ := valuation_surjective (uniformizer K)
+    have hy0 : y ≠ 0 := fun e ↦ by simpa [e] using hy.symm
+    have hyo : y ∈ 𝒪[K] := by
+      rw [mem_integers_iff, (valuation K).rel_one_iff, hy]
+      exact uniformizer_lt_one.le
+    rw [← hy, ← map_pow, ← (valuation K).rel_iff_le, ← div_rel_one_iff (pow_ne_zero _ hy0),
+      ← mem_integers_iff] at hx
+    rw [← hϖ, ← map_pow, ← Compatible.rel_iff_le, rel_iff_dvd] at hx
+    obtain ⟨x, rfl⟩ := hx
+    refine Ideal.mul_mem_right _ _ (Ideal.pow_mem_pow ?_ _)
+    rw [mem_maximalIdeal_iff_valuation_le, hϖ]
+
+lemma isAdic : IsAdic 𝓂[K] := by
+  rw [isAdic_iff_hasBasis_zero, Topology.IsEmbedding.subtypeVal.nhds_eq_comap]
+  refine ((IsValuativeTopology.hasBasis_nhds_zero' K).comap _).to_hasBasis ?_ ?_
+  · simp
+
+
 proof_wanted isAdicComplete : IsAdicComplete 𝓂[K] 𝒪[K]
+
+@[simp]
+lemma valueGroupWithZeroIsoInt_uniformizer :
+    valueGroupWithZeroIsoInt K (uniformizer K) = Multiplicative.ofAdd (-1 : ℤ) := by
+  apply le_antisymm
+  · have : valueGroupWithZeroIsoInt K (uniformizer K) ≠ 0 := by simp
+    rw [← WithZero.coe_unzero this, WithZero.coe_le_coe, ← Multiplicative.toAdd_le,
+      Int.le_iff_lt_add_one, toAdd_ofAdd, neg_add_cancel, ← Multiplicative.ofAdd_lt,
+      ofAdd_toAdd, ofAdd_zero, ← WithZero.coe_lt_coe, WithZero.coe_unzero this]
+    exact ((valueGroupWithZeroIsoInt K).toOrderIso.lt_iff_lt.mpr
+      uniformizer_lt_one).trans_eq (valueGroupWithZeroIsoInt K).map_one
+  · refine (valueGroupWithZeroIsoInt K).toOrderIso.symm_apply_le.mp ?_
+    rw [le_uniformizer_iff, OrderIso.symm_apply_lt]
+    exact lt_of_lt_of_eq (by decide) (valueGroupWithZeroIsoInt K).map_one.symm
+
+variable {K} in
+lemma exists_uniformizer_zpow_eq {x : ValueGroupWithZero K} (hx : x ≠ 0) :
+    ∃ n : ℤ, uniformizer K ^ n = x := by
+  use - ((valueGroupWithZeroIsoInt K x).unzero (by simpa)).toAdd
+  apply (valueGroupWithZeroIsoInt K).injective
+  simp [← WithZero.coe_zpow, ← ofAdd_zsmul]
 
 end TopologicalSpace
 

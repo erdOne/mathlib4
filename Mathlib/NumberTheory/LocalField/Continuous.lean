@@ -41,37 +41,14 @@ lemma charZero_or_charP_residueChar : CharZero K ∨ CharP K (residueChar K) := 
     obtain rfl : p = residueChar K := (CharP.existsUnique 𝓀[K]).unique ‹_› ‹_›
     exact .inr (CharP.of_ringHom_of_ne_zero (algebraMap 𝒪[K] K) _ hp0)
 
-lemma ValuativeRel.mem_integers_iff {R : Type*} [CommRing R] [ValuativeRel R] {x : R} :
-    x ∈ 𝒪[R] ↔ x ≤ᵥ 1 := by
-  simpa using (Valuation.Compatible.rel_iff_le (v := valuation R) x 1).symm
-
-lemma Subring.isUnit_iff {K : Type*} [Field K] {S : Subring K} {x : S} :
-    IsUnit x ↔ x ≠ 0 ∧ x.1⁻¹ ∈ S := by
-  refine ⟨fun h ↦ ⟨h.ne_zero, ?_⟩, fun ⟨h, h'⟩ ↦ isUnit_of_mul_eq_one _ ⟨_, h'⟩ (by ext; simp [h])⟩
-  have : h.unit⁻¹ = x.1⁻¹ := eq_inv_of_mul_eq_one_left congr($h.unit.inv_mul)
-  exact this ▸ (h.unit⁻¹).1.2
-
-lemma ValuativeRel.mem_maximalIdeal_iff {K : Type*} [Field K] [ValuativeRel K] {x : 𝒪[K]} :
-    x ∈ 𝓂[K] ↔ x.1 <ᵥ 1 := by
-  refine not_iff_not.mpr ?_
-  rw [Subring.isUnit_iff, ValuativeRel.mem_integers_iff]
-  obtain rfl | hx := eq_or_ne x 0 <;> simp [*, inv_rel_one]
-
 scoped[ValuativeRel] notation3 "q[" K "]" => Nat.card 𝓀[K]
 scoped[ValuativeRel] notation3 "p[" K "]" => residueChar K
-
-instance : IsAdicComplete 𝓂[K] 𝒪[K] := sorry
 
 lemma HenselianLocalRing.of_henselianRing (R : Type*) [CommRing R] [IsLocalRing R]
     [HenselianRing R (IsLocalRing.maximalIdeal R)] : HenselianLocalRing R where
   is_henselian f h₁ h₂ h₃ h₄ := HenselianRing.is_henselian f h₁ h₂ h₃ (h₄.map _)
 
 instance : HenselianLocalRing 𝒪[K] := .of_henselianRing _
-
--- lemma exists_lt_pow₀ {M : Type*} [CommMonoidWithZero M] [PartialOrder M] [MulArchimedean M]
---     [PosMulStrictMono M] [ZeroLEOneClass M] {a : M} (ha : 1 < a) (b : M) : ∃ n, b < a ^ n :=
---   let ⟨k, hk⟩ := MulArchimedean.arch b ha
---   ⟨k + 1, hk.trans_lt <| pow_lt_pow_right₀ ha k.lt_succ_self⟩
 
 open Polynomial in
 lemma exists_pow_eq_pow_card_residueField_sub_one_of_valuation_eq_one
@@ -220,6 +197,10 @@ instance [Algebra K L] : MulSemiringAction (L ≃ₐ[K] L) 𝒪[L] where
   smul_add _ _ _ := Subtype.ext <| map_add _ _ _
   smul_one _ := Subtype.ext <| map_one _
   smul_mul _ _ _ := Subtype.ext <| map_mul _ _ _
+
+instance [Algebra K L] :
+    SMulCommClass (L ≃ₐ[K] L) 𝒪[K] 𝒪[L] where
+  smul_comm σ _ _ := Subtype.ext <| map_smul σ _ _
 
 open IsNonarchimedeanLocalField
 

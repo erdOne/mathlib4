@@ -223,6 +223,16 @@ lemma continuous_valuation : Continuous v := by
   · simpa [(hasBasis_nhds _).tendsto_iff (WithZeroTopology.hasBasis_nhds_of_ne_zero hx)]
       using ⟨.mk0 (v x) hx, fun _ ↦ Valuation.map_eq_of_sub_lt _⟩
 
+instance {S : Subring R} [IsUnramified S R] : IsValuativeTopology S := by
+  rw [iff_hasBasis_nhds_zero, Topology.IsEmbedding.subtypeVal.nhds_eq_comap]
+  refine ((hasBasis_nhds_zero R).comap _).to_hasBasis (fun γ _ ↦ ?_) (fun γ _ ↦ ?_)
+  · obtain ⟨γ, rfl⟩ := (Units.mapEquiv (.ofBijective _
+      (mapValueGroupWithZero_bijective (R := S)))).surjective γ
+    refine ⟨γ, trivial, fun x hx ↦ by simpa using
+      ValuativeExtension.mapValueGroupWithZero_strictMono (B := R).lt_iff_lt.mpr hx⟩
+  · exact ⟨γ.map (ValuativeExtension.mapValueGroupWithZero S R), trivial, fun x hx ↦
+      ValuativeExtension.mapValueGroupWithZero_strictMono (B := R).lt_iff_lt.mp (by simpa)⟩
+
 end IsValuativeTopology
 
 namespace ValuativeRel

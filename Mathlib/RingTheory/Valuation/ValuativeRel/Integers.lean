@@ -108,6 +108,14 @@ lemma mem_maximalIdeal_pow [IsIntegers R] [IsDiscrete R] {x n} :
     refine Ideal.mul_mem_right _ _ (Ideal.pow_mem_pow ?_ _)
     rw [mem_maximalIdeal_iff_valuation_le, hϖ]
 
+instance {R K : Type*} [CommRing R] [Field K] [ValuativeRel R] [ValuativeRel K] [Algebra R K]
+    [IsFractionRing R K] [ValuativeExtension R K] :
+    ValuativeRel.IsUnramified R K where
+  mapValueGroupWithZero_surjective x := by
+    obtain ⟨x, rfl⟩ := valuation_surjective x
+    obtain ⟨a, b, hb, rfl⟩ := IsFractionRing.div_surjective (A := R) x
+    refine ⟨valuation _ a / valuation _ b, by simp⟩
+
 instance {K Γ₀ : Type*} [Field K] [LinearOrderedCommGroupWithZero Γ₀] (v : Valuation K Γ₀)
     [ValuativeRel K] [v.Compatible] : IsIntegers v.integer where
   rel_one a := v.rel_one_iff.mpr a.2
@@ -117,34 +125,25 @@ instance {K Γ₀ : Type*} [Field K] [LinearOrderedCommGroupWithZero Γ₀] (v :
     · exact ⟨⟨a / b, v.rel_one_iff.mp ((div_rel_one_iff hb).mpr h)⟩,
         Subtype.ext (mul_div_cancel₀ _ hb).symm⟩
 
-instance {R K : Type*} [CommRing R] [Field K] [ValuativeRel R] [ValuativeRel K] [Algebra R K]
-    [IsFractionRing R K] [ValuativeExtension R K] :
-    ValuativeRel.IsUnramified R K where
-  mapValueGroupWithZero_surjective x := by
-    obtain ⟨x, rfl⟩ := valuation_surjective x
-    obtain ⟨a, b, hb, rfl⟩ := IsFractionRing.div_surjective (A := R) x
-    refine ⟨valuation _ a / valuation _ b, by simp⟩
-
 open Topology in
 lemma isValuativeTopology_iff_isAdic [IsIntegers R] [IsNontrivial R] [IsDiscrete R] [IsRankLeOne R]
     [TopologicalSpace R] :
     IsValuativeTopology R ↔ IsAdic (IsLocalRing.maximalIdeal R) := by
-  sorry
-  -- wlog H : IsTopologicalRing R
-  -- · constructor <;> intro h
-  --   · cases H inferInstance
-  --   · have : NonarchimedeanRing R := h ▸ (IsLocalRing.maximalIdeal R).nonarchimedean
-  --     cases H inferInstance
-  -- rw [IsValuativeTopology.iff_hasBasis_nhds_zero, isAdic_iff_hasBasis_zero]
-  -- change _ ↔ (𝓝 0).HasBasis _ ({ x | x ∈ IsLocalRing.maximalIdeal R ^ · })
-  -- simp_rw [mem_maximalIdeal_pow]
-  -- refine Filter.HasBasis.to_hasBasis_iff (fun γ _ ↦ ?_) (fun n _ ↦ ?_)
-  -- · obtain ⟨n, hn⟩ := exists_pow_lt₀ (uniformizer_lt_one) γ
-  --   exact ⟨n, trivial, fun x hx ↦ hx.trans_lt hn⟩
-  -- · exact ⟨.mk0 (uniformizer R ^ n) (by simp [uniformizer_pos.ne']),
-  --     trivial, by simp +contextual [le_of_lt]⟩
+  wlog H : IsTopologicalRing R
+  · constructor <;> intro h
+    · cases H inferInstance
+    · have : NonarchimedeanRing R := h ▸ (IsLocalRing.maximalIdeal R).nonarchimedean
+      cases H inferInstance
+  rw [IsValuativeTopology.iff_hasBasis_nhds_zero, isAdic_iff_hasBasis_zero]
+  change _ ↔ (𝓝 0).HasBasis _ ({ x | x ∈ IsLocalRing.maximalIdeal R ^ · })
+  simp_rw [mem_maximalIdeal_pow]
+  refine Filter.HasBasis.to_hasBasis_iff (fun γ _ ↦ ?_) (fun n _ ↦ ?_)
+  · obtain ⟨n, hn⟩ := exists_pow_lt₀ (uniformizer_lt_one) γ
+    exact ⟨n, trivial, fun x hx ↦ hx.trans_lt hn⟩
+  · exact ⟨.mk0 (uniformizer R ^ n) (by simp [uniformizer_pos.ne']),
+      trivial, by simp +contextual [le_of_lt]⟩
 
-lemma ValuativeRel.isAdic_maximalIdeal {K : Type*} [Field K] [ValuativeRel K] [TopologicalSpace K]
+lemma isAdic_maximalIdeal {K : Type*} [Field K] [ValuativeRel K] [TopologicalSpace K]
     [IsValuativeTopology K] [IsNontrivial K] [IsDiscrete K] [IsRankLeOne K] :
     IsAdic 𝓂[K] := by
   rw [← isValuativeTopology_iff_isAdic]

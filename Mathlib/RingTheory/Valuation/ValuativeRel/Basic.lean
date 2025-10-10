@@ -5,7 +5,6 @@ Authors: Aaron Liu, Adam Topaz
 -/
 import Mathlib.RingTheory.Valuation.Basic
 import Mathlib.Data.NNReal.Defs
-import Mathlib.Topology.Algebra.Ring.Basic
 import Mathlib.Topology.Defs.Filter
 
 /-!
@@ -1080,9 +1079,6 @@ instance [IsRankLeOne R] : IsRankLeOne S := .of_valuativeExtension R
 
 instance [IsUnramified S R] [IsDiscrete R] : IsDiscrete S := .of_isUnramified R
 instance [IsUnramified S R] [IsNontrivial R] : IsNontrivial S := .of_isUnramified R
-instance [TopologicalSpace R] [IsValuativeTopology R] : IsValuativeTopology S := by
-  sorry
-
 
 end Subring
 

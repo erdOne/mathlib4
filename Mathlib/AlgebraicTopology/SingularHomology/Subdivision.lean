@@ -1,5 +1,6 @@
 import Mathlib
-import Mathlib.AlgebraicTopology.SinglularHomology.Stuff
+import Mathlib.AlgebraicTopology.SingularHomology.Stuff
+import Mathlib.AlgebraicTopology.SingularHomology.BarycentricSubdivision
 
 namespace AlgebraicTopology
 
@@ -19,94 +20,6 @@ open HomologicalComplex (eval)
 
 local notation3 "Δₜ[" n "]" => SimplexCategory.toTop.obj ⦋n⦌
 
-@[simps!]
-noncomputable def SSet.stdSimplexToTop :
-    SSet.stdSimplex.{u} ⟶ SimplexCategory.toTop ⋙ TopCat.toSSet :=
-  SSet.stdSimplex.whiskerLeft sSetTopAdj.unit ≫
-    Functor.whiskerRight SSet.toTopSimplex.hom TopCat.toSSet
-
-lemma SSet.yonedaEquiv_symm_apply_app {S T : SSet} (f : S ⟶ T) (x : S _⦋n⦌) :
-    SSet.yonedaEquiv.symm (f.app (.op ⦋n⦌) x) = SSet.yonedaEquiv.symm x ≫ f := by
-  rw [SSet.yonedaEquiv.symm_apply_eq]
-  simp [SSet.yonedaEquiv, uliftYonedaEquiv]
-
-@[simp]
-lemma SSet.yonedaEquiv_symm_app
-    {S : SSet} (n : SimplexCategory) (x : S.obj (.op n)) (α) :
-    (SSet.yonedaEquiv.symm x).app (.op n) α = S.map (SSet.stdSimplex.objEquiv α).op x := rfl
-
-@[simp]
-lemma SSet.yonedaEquiv_symm_stdSimplex_id (n : SimplexCategory) :
-    SSet.yonedaEquiv.symm (SSet.stdSimplex.objEquiv.symm (β := n ⟶ _) (𝟙 n)) = 𝟙 _ :=
-  SSet.yonedaEquiv.symm_apply_eq.mpr rfl
-
-lemma sSetTopAdj_unit_app_app_down (S : SSet) (m) (a : S.obj m) :
-    ((sSetTopAdj.unit.app S).app m a).down =
-      SSet.toTopSimplex.inv.app _ ≫ SSet.toTop.map (SSet.yonedaEquiv.symm a) := by
-  delta sSetTopAdj
-  rw [Presheaf.uliftYonedaAdjunction_unit_app_app]
-  rfl
-
-@[simp]
-lemma SSet.stdSimplexToTop_app_app_down (m n) (α) :
-    ((stdSimplexToTop.app m).app n α).down =
-      SimplexCategory.toTop.map (SSet.stdSimplex.objEquiv α) := by
-  dsimp [stdSimplexToTop, TopCat.toSSet]
-  erw [sSetTopAdj_unit_app_app_down]
-  simp [← IsIso.eq_inv_comp, ← NatTrans.naturality]
-  rfl
-
-attribute [local simp] SSet.singularChainComplexFunctor SSet.yonedaEquiv_symm_apply_app in
-noncomputable
-def SSet.singularChainComplexFunctorAdjunction : (Functor.postcompose₂.obj (eval _ _ n)).obj
-    (SSet.singularChainComplexFunctor C) ⊣ (evaluation _ _).obj Δ[n] where
-  unit.app R := Sigma.ι (fun _ : Δ[n] _⦋n⦌ ↦ R) (SSet.stdSimplex.objEquiv (n := ⦋n⦌).symm (𝟙 ⦋n⦌))
-  counit.app F := { app S := Sigma.desc fun α ↦ F.map (SSet.yonedaEquiv.symm α) }
-  right_triangle_components F := by dsimp; simp
-
-noncomputable
-def singularChainComplexFunctorAdjunction : (Functor.postcompose₂.obj (eval _ _ n)).obj
-    (singularChainComplexFunctor C) ⊣ (evaluation _ _).obj (SimplexCategory.toTop.obj ⦋n⦌) :=
-  ((SSet.singularChainComplexFunctorAdjunction C n).comp (sSetTopAdj.whiskerLeft _)).ofNatIsoRight
-    ((evaluation TopCat C).mapIso (SSet.toTopSimplex.app _))
-
-omit [CategoryWithHomology C] in
-lemma singularChainComplexFunctorAdjunction_unit_app (R : C) :
-    (singularChainComplexFunctorAdjunction C n).unit.app R =
-    (SSet.singularChainComplexFunctorAdjunction C n).unit.app R ≫
-      (((SSet.singularChainComplexFunctor C).obj R).map (SSet.stdSimplexToTop.app _)).f _ := by
-  dsimp [singularChainComplexFunctorAdjunction, Adjunction.ofNatIsoRight,
-    Adjunction.equivHomsetRightOfNatIso, Adjunction.homEquiv,
-    Adjunction.comp, singularChainComplexFunctor]
-  simp [stdSimplexToTop]
-
-omit [CategoryWithHomology C] in
-lemma singularChainComplexFunctorAdjunction_unit_app' (R : C) :
-    (singularChainComplexFunctorAdjunction C n).unit.app R =
-      Sigma.ι (fun _ ↦ R) ((stdSimplexToTop.app ⦋n⦌).app (.op ⦋n⦌)
-        (SSet.stdSimplex.objEquiv.symm (𝟙 ⦋n⦌))) := by
-  dsimp [singularChainComplexFunctorAdjunction, Adjunction.ofNatIsoRight,
-    Adjunction.equivHomsetRightOfNatIso, Adjunction.homEquiv,
-    Adjunction.comp, singularChainComplexFunctor,
-    SSet.singularChainComplexFunctorAdjunction, SSet.singularChainComplexFunctor]
-  simp [stdSimplexToTop]
-
-
-omit [CategoryWithHomology C] in
-lemma ι_singularChainComplexFunctorAdjunction_counit_app_app (F : TopCat ⥤ C) (X : TopCat) (i) :
-    Sigma.ι _ i ≫ ((singularChainComplexFunctorAdjunction C n).counit.app F).app X =
-      F.map i.down := by
-  trans F.map (SSet.toTopSimplex.inv.app ⦋n⦌ ≫ SSet.toTop.map (SSet.yonedaEquiv.symm i) ≫
-      sSetTopAdj.counit.app X)
-  · dsimp [singularChainComplexFunctorAdjunction, Adjunction.ofNatIsoRight,
-      Adjunction.equivHomsetRightOfNatIso, Adjunction.homEquiv,
-      Adjunction.comp, singularChainComplexFunctor, SSet.singularChainComplexFunctor,
-      SSet.singularChainComplexFunctorAdjunction]
-    simp
-  · congr 1
-    rw [← reassoc_of% sSetTopAdj_unit_app_app_down]
-    exact congr(($(sSetTopAdj.right_triangle_components X).app (.op ⦋n⦌) i).down)
-
 @[simp]
 lemma stdSimplex.coe_apply (𝕜 ι : Type*) [Semiring 𝕜] [PartialOrder 𝕜] [Fintype ι]
     (σ : stdSimplex 𝕜 ι) (i : ι) : σ.1 i = σ i := rfl
@@ -122,14 +35,14 @@ def stdSimplex.barycenter (𝕜 ι : Type*) [Semifield 𝕜] [PartialOrder 𝕜]
   stdSimplex 𝕜 ι := ⟨fun _ ↦ (Fintype.card ι : 𝕜)⁻¹, by simp, by simp⟩
 
 noncomputable
-def stdSimplex.extend {n E : Type*} [SeminormedAddCommGroup E] [NormedSpace ℝ E]
+def stdSimplex.extend {n E : Type*} [AddCommGroup E] [Module ℝ E]
     [Fintype n] (α : stdSimplex ℝ n → E) (σ : {f : n → ℝ // 0 ≤ f}) : E :=
   if hσ : σ = 0 then 0 else (∑ i, σ.1 i) • α ⟨(∑ i, σ.1 i)⁻¹ • σ,
     fun i ↦ mul_nonneg (inv_nonneg.mpr (Finset.sum_nonneg fun _ _ ↦ σ.2 _)) (σ.2 _), by
     suffices ∑ i, σ.1 i ≠ 0 by simp [← Finset.mul_sum, this]
     simpa [Finset.sum_eq_zero_iff_of_nonneg fun i _ ↦ σ.2 i, Subtype.ext_iff, funext_iff] using hσ⟩
 
-lemma stdSimplex.extend_eq_of_sum_eq {n E : Type*} [SeminormedAddCommGroup E] [NormedSpace ℝ E]
+lemma stdSimplex.extend_eq_of_sum_eq {n E : Type*} [AddCommGroup E] [Module ℝ E]
     [Fintype n] (α : stdSimplex ℝ n → E) (σ : {f : n → ℝ // 0 ≤ f})
     (k : ℝ) (hk : k = ∑ i, σ.1 i) :
     stdSimplex.extend α σ = if hk0 : k = 0 then 0 else k • α ⟨k⁻¹ • σ, fun i ↦
@@ -157,7 +70,7 @@ lemma stdSimplex.sum_extend {m n : Type*}
   · simp [← Finset.mul_sum]
 
 @[simp]
-lemma stdSimplex.extend_mk {n E : Type*} [SeminormedAddCommGroup E] [NormedSpace ℝ E]
+lemma stdSimplex.extend_mk {n E : Type*} [AddCommGroup E] [Module ℝ E]
     [Fintype n] (α : stdSimplex ℝ n → E) (σ : stdSimplex ℝ n) :
     stdSimplex.extend α ⟨σ.1, σ.2.1⟩ = α σ := by
   dsimp [stdSimplex.extend]
@@ -202,24 +115,45 @@ lemma stdSimplex.continuous_extend
 
 variable {n}
 
-noncomputable def stdSimplex.cone {m : ℕ} (p : stdSimplex ℝ (Fin n))
-      (α : C(stdSimplex ℝ (Fin m), stdSimplex ℝ (Fin n))) :
-    C(stdSimplex ℝ (Fin (m + 1)), stdSimplex ℝ (Fin n)) where
-  toFun σ := ⟨σ 0 • ↑p + stdSimplex.extend (Subtype.val ∘ α) ⟨σ ∘ Fin.succ, fun i ↦ by simp⟩,
-      add_nonneg (smul_nonneg (σ.2.1 _) p.2.1) (stdSimplex.extend_nonneg α _), by
-      simp [Finset.sum_add_distrib, ← Finset.mul_sum, stdSimplex.sum_extend, ← Fin.sum_univ_succ]⟩
-  continuous_toFun := by
-    refine continuous_induced_rng.mpr (continuous_pi fun i ↦ .add (.mul
-      ((continuous_apply _).comp continuous_subtype_val) (by fun_prop))
-      ((continuous_apply _).comp ((continuous_extend (Subtype.val ∘ α) (by fun_prop)).comp' ?_)))
-    exact continuous_induced_rng.mpr
-      (continuous_pi fun i ↦ ((continuous_apply i.succ).comp continuous_subtype_val))
+noncomputable
+instance (n) [Fintype n] : ConvexSpace ℝ ↑(stdSimplex ℝ n) :=
+  (convex_stdSimplex _ _).convexSpace
 
-lemma stdSimplex.cone_apply {m : ℕ} (p : stdSimplex ℝ (Fin n))
-      (α : C(stdSimplex ℝ (Fin m), stdSimplex ℝ (Fin n)))
-      (σ : stdSimplex ℝ (Fin (m + 1))) (i : Fin n) :
-    stdSimplex.cone p α σ i = σ 0 • p i +
-      stdSimplex.extend (Subtype.val ∘ α) ⟨σ ∘ Fin.succ, fun i ↦ by simp⟩ i := rfl
+noncomputable
+instance (n) [Fintype n] : IsConvexMetricSpace ↑(stdSimplex ℝ n) :=
+  (convex_stdSimplex _ _).isConvexMetricSpace
+
+noncomputable
+instance (n) [Fintype n] : CompactSpace ↑(stdSimplex ℝ n) :=
+  isCompact_iff_compactSpace.mp (isCompact_stdSimplex _ _)
+
+noncomputable
+instance (n) [Fintype n] : CompactSpace ↑(stdSimplex ℝ n) :=
+  isCompact_iff_compactSpace.mp (isCompact_stdSimplex _ _)
+
+noncomputable
+instance {T : Type*} [PseudoMetricSpace T] [CompactSpace T] : BoundedSpace T :=
+  ⟨(isCompact_iff_totallyBounded_isComplete.mp isCompact_univ).1.isBounded⟩
+
+-- noncomputable def stdSimplex.cone {m : ℕ} (p : stdSimplex ℝ (Fin n))
+--       (α : C(stdSimplex ℝ (Fin m), stdSimplex ℝ (Fin n))) :
+--     C(stdSimplex ℝ (Fin (m + 1)), stdSimplex ℝ (Fin n)) where
+--   toFun σ := ⟨σ 0 • ↑p + stdSimplex.extend (Subtype.val ∘ α) ⟨σ ∘ Fin.succ, fun i ↦ by simp⟩,
+--       add_nonneg (smul_nonneg (σ.2.1 _) p.2.1) (stdSimplex.extend_nonneg α _), by
+--       simp [Finset.sum_add_distrib, ← Finset.mul_sum, stdSimplex.sum_extend, ← Fin.sum_univ_succ]⟩
+--   continuous_toFun := by
+--     refine continuous_induced_rng.mpr (continuous_pi fun i ↦ .add (.mul
+--       ((continuous_apply _).comp continuous_subtype_val) (by fun_prop))
+--       ((continuous_apply _).comp ((continuous_extend (Subtype.val ∘ α) (by fun_prop)).comp' ?_)))
+--     exact continuous_induced_rng.mpr
+--       (continuous_pi fun i ↦ ((continuous_apply i.succ).comp continuous_subtype_val))
+
+-- lemma stdSimplex.cone_apply {m : ℕ} (p : stdSimplex ℝ (Fin n))
+--       (α : C(stdSimplex ℝ (Fin m), stdSimplex ℝ (Fin n)))
+--       (σ : stdSimplex ℝ (Fin (m + 1))) (i : Fin n) :
+--     stdSimplex.cone p α σ i = σ 0 • p i +
+--       stdSimplex.extend (Subtype.val ∘ α) ⟨σ ∘ Fin.succ, fun i ↦ by simp⟩ i := by
+--   sorry
 
 noncomputable def SimplexCategory.cone {m : ℕ} (p : Δₜ[n]) (α : Δₜ[m] ⟶ Δₜ[n]) :
     Δₜ[m + 1] ⟶ Δₜ[n] :=
@@ -275,12 +209,13 @@ lemma toTop_δ_zero_cone {m : ℕ} (p : Δₜ[n]) (α : Δₜ[m] ⟶ Δₜ[n]) :
     SimplexCategory.toTop.map (SimplexCategory.δ 0) ≫ SimplexCategory.cone p α = α := by
   ext σ
   apply ULift.down_injective
-  dsimp
+  dsimp [SimplexCategory.toTop, TopCat.uliftFunctor, SimplexCategory.cone, ULift.map]
   ext i
   have : (stdSimplex.map (SimplexCategory.δ 0) σ.down) ∘ Fin.succ = σ.down.1 := by
     ext; simp [stdSimplex.map_δ_apply]
-  simp [SimplexCategory.toTop, TopCat.uliftFunctor, SimplexCategory.cone, ULift.map,
-    stdSimplex.cone_apply, this, stdSimplex.map_δ_apply]; rfl
+  rw [stdSimplex.cone_apply (σ' := σ.down)]
+  · simp [stdSimplex.map_δ_apply, convexComboPair_zero]; rfl
+  · ext; simp [stdSimplex.map_δ_apply]
 
 @[simp]
 lemma toTop_δ_succ_cone {m : ℕ} (p : Δₜ[n]) (α : Δₜ[m + 1] ⟶ Δₜ[n]) (i : Fin (m + 2)) :
@@ -288,23 +223,16 @@ lemma toTop_δ_succ_cone {m : ℕ} (p : Δₜ[n]) (α : Δₜ[m + 1] ⟶ Δₜ[n
     SimplexCategory.cone p (SimplexCategory.toTop.{w}.map (SimplexCategory.δ i) ≫ α) := by
   refine TopCat.ext fun σ ↦ ULift.down_injective (stdSimplex.ext (funext fun j ↦ ?_))
   dsimp [SimplexCategory.toTop, TopCat.uliftFunctor, SimplexCategory.cone, ULift.map,
-    stdSimplex.cone_apply]
-  simp only [stdSimplex.map_δ_apply]
-  dsimp
-  rw [zero_add, add_right_inj, stdSimplex.extend_eq_of_sum_eq (k := 1 - σ.down.1 0),
-    stdSimplex.extend_eq_of_sum_eq (k := 1 - σ.down.1 0), dite_apply, dite_apply]
-  · refine dite_congr rfl (by simp) fun h ↦ ?_
-    dsimp
-    congr 5
-    ext j
-    obtain hij | rfl | hij := lt_trichotomy i j
-    · simp [stdSimplex.map_δ_apply, hij, hij.not_gt, show 1 ≤ j.1 by lia]
-    · simp [stdSimplex.map_δ_apply]
-    · simp [stdSimplex.map_δ_apply, hij, hij.not_gt]
-  · simp [sub_eq_iff_eq_add', ← Fin.sum_univ_succ]
-  · have : stdSimplex.map (SimplexCategory.δ i.succ) σ.down 0 =
-        DFunLike.coe (F := stdSimplex _ _) σ.down 0 := by simp [stdSimplex.map_δ_apply]
-    simp [sub_eq_iff_eq_add', ← Fin.sum_univ_succ, ← this]
+    stdSimplex.cone]
+  simp only [_root_.SimplexCategory.len_mk, stdSimplex.map_δ_apply, Fin.not_lt_zero, ↓reduceIte,
+    gt_iff_lt, Fin.succ_pos, ↓reduceDIte, Fin.coe_ofNat_eq_mod, Nat.zero_mod, Fin.zero_eta,
+    zero_add]
+  congr! with _ h
+  ext j
+  obtain hij | rfl | hij := lt_trichotomy i j
+  · simp [stdSimplex.map_δ_apply, hij, hij.not_gt, show 1 ≤ j.1 by lia]
+  · simp [stdSimplex.map_δ_apply]
+  · simp [stdSimplex.map_δ_apply, hij, hij.not_gt]
 
 noncomputable
 def singularChainComplexCone (m : ℕ) (p : Δₜ[n]) :
@@ -330,46 +258,6 @@ lemma singularChainComplexCone_singularChainComplexFunctor_map
       (((singularChainComplexFunctor C).map f).app _).f _ ≫ singularChainComplexCone S m p := by
   apply Sigma.hom_ext _ _ fun i ↦ ?_
   simp [singularChainComplexCone, singularChainComplexFunctor, SSet.singularChainComplexFunctor]
-
-@[simps]
-def _root_.HomologicalComplex.dNatTrans {ι : Type*} (V : Type*) [Category* V] [HasZeroMorphisms V]
-    (c : ComplexShape ι) (i j : ι) :
-    HomologicalComplex.eval V c i ⟶ HomologicalComplex.eval V c j where
-  app X := X.d i j
-
-
-instance {C D E : Type*} [Category* C] [Category* D] [Category* E]
-    (F : D ⥤ E) [Preadditive D] [Preadditive E] [F.Additive] :
-    ((Functor.whiskeringRight C D E).obj F).Additive where
-
-instance {C D E : Type*} [Category* C] [Category* D] [Category* E] [Preadditive E] :
-    (Functor.whiskeringRight C D E).Additive where
-
-instance {C D E : Type*} [Category* C] [Category* D] [Category* E]
-    (F : C ⥤ D) [Preadditive E] : ((Functor.whiskeringLeft C D E).obj F).Additive where
-
-instance {C D E E' : Type*} [Category* C] [Category* D] [Category* E] [Category* E']
-    (G : C ⥤ D ⥤ E) (F : E ⥤ E') [Preadditive C] [Preadditive E'] [Preadditive E]
-    [F.Additive] [G.Additive] :
-    ((Functor.postcompose₂.obj F).obj G).Additive := by
-  dsimp [Functor.postcompose₂]
-  infer_instance
-
-instance : (sigmaConst.{w} (C := C)).Additive where
-
-instance {C : Type*} [Category* C] [Preadditive C] : Preadditive (SimplicialObject C) :=
-  inferInstanceAs (Preadditive (SimplexCategoryᵒᵖ ⥤ C))
-
-instance : (alternatingFaceMapComplex C).Additive where
-
-instance : (SSet.singularChainComplexFunctor C).Additive := by
-  have : (Functor.whiskeringRight SimplexCategoryᵒᵖ (Type w) C).Additive := inferInstance -- why?
-  delta SSet.singularChainComplexFunctor SimplicialObject.whiskering
-  infer_instance
-
-instance : (singularChainComplexFunctor C).Additive := by
-  delta singularChainComplexFunctor
-  infer_instance
 
 noncomputable
 def singularChainComplexSubdivisionAppF : ∀ n,

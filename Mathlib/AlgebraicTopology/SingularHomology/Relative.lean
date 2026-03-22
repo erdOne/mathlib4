@@ -36,6 +36,43 @@ instance {ι : Type*} (V : Type*) [Category* V] [HasZeroMorphisms V]
       hasColimit_of_iso (F := parallelPair (f.f n) 0) (parallelPairIsoMk (.refl _) (.refl _))
     inferInstance
 
+set_option backward.isDefEq.respectTransparency false in
+instance {C : Type*} [Category* C] [HasCoproducts C] [Preadditive C] [Limits.HasPullbacks C] :
+    (AlgebraicTopology.alternatingFaceMapComplex C).PreservesMonomorphisms where
+  preserves _ _ := HomologicalComplex.mono_of_mono_f _ fun _ ↦ by dsimp; infer_instance
+
+instance {C D E : Type*} [Category* C] [Category* D] [Category* E] (F : D ⥤ E)
+    [F.PreservesMonomorphisms] [HasPullbacks D] {G₁ G₂ : C ⥤ D} (α : G₁ ⟶ G₂) [Mono α] :
+    Mono (Functor.whiskerRight α F) := by
+  apply +allowSynthFailures NatTrans.mono_of_mono_app
+  dsimp
+  infer_instance
+
+instance {C D E : Type*} [Category* C] [Category* D] [Category* E] (F : D ⥤ E)
+    [F.PreservesMonomorphisms] [HasPullbacks D] :
+    ((Functor.whiskeringRight C D E).obj F).PreservesMonomorphisms where
+  preserves f _ := by dsimp; infer_instance
+
+set_option backward.isDefEq.respectTransparency false in
+instance {C D : Type*} [Category* C] [Category* D] (F : C ⥤ D)
+    [F.PreservesMonomorphisms] [HasPullbacks C] :
+    ((SimplicialObject.whiskering C D).obj F).PreservesMonomorphisms :=
+  inferInstanceAs ((Functor.whiskeringRight _ _ _).obj F).PreservesMonomorphisms
+
+instance : TopCat.toSSet.IsRightAdjoint := ⟨_, ⟨sSetTopAdj⟩⟩
+
+open AlgebraicTopology in
+set_option backward.isDefEq.respectTransparency false in
+instance {C : Type*} [Category* C] [HasCoproducts C] [Preadditive C] [Limits.HasPullbacks C]
+    {X : C} :
+    ((singularChainComplexFunctor C).obj X).PreservesMonomorphisms where
+  preserves f _ := by
+    dsimp [singularChainComplexFunctor, SSet.singularChainComplexFunctor]
+    apply +allowSynthFailures Functor.map_mono
+    apply +allowSynthFailures Functor.map_mono
+    dsimp [SSet] -- Maybe `SSet` should be an abbrev.
+    infer_instance
+#min_imports
 @[simps]
 def CategoryTheory.Limits.cokerShortComplex (C : Type*) [Category* C] [HasZeroMorphisms C]
     [HasCokernels C] : Arrow C ⥤ ShortComplex C where
@@ -89,39 +126,6 @@ def relativeSingularHomologyFunctor.π :
     relativeSingularHomologyFunctor C n :=
   Functor.whiskerRight (relativeSingularChainComplex.π C)
     ((Functor.whiskeringRight _ _ _).obj (HomologicalComplex.homologyFunctor _ _ n))
-
-set_option backward.isDefEq.respectTransparency false in
-instance [Limits.HasPullbacks C] : (alternatingFaceMapComplex C).PreservesMonomorphisms where
-  preserves _ _ := HomologicalComplex.mono_of_mono_f _ fun _ ↦ by dsimp; infer_instance
-
-instance {C D E : Type*} [Category* C] [Category* D] [Category* E] (F : D ⥤ E)
-    [F.PreservesMonomorphisms] [HasPullbacks D] {G₁ G₂ : C ⥤ D} (α : G₁ ⟶ G₂) [Mono α] :
-    Mono (Functor.whiskerRight α F) := by
-  apply +allowSynthFailures NatTrans.mono_of_mono_app
-  dsimp
-  infer_instance
-
-instance {C D E : Type*} [Category* C] [Category* D] [Category* E] (F : D ⥤ E)
-    [F.PreservesMonomorphisms] [HasPullbacks D] :
-    ((Functor.whiskeringRight C D E).obj F).PreservesMonomorphisms where
-  preserves f _ := by dsimp; infer_instance
-
-set_option backward.isDefEq.respectTransparency false in
-instance {C D : Type*} [Category* C] [Category* D] (F : C ⥤ D)
-    [F.PreservesMonomorphisms] [HasPullbacks C] :
-    ((SimplicialObject.whiskering C D).obj F).PreservesMonomorphisms :=
-  inferInstanceAs ((Functor.whiskeringRight _ _ _).obj F).PreservesMonomorphisms
-
-instance : TopCat.toSSet.IsRightAdjoint := ⟨_, ⟨sSetTopAdj⟩⟩
-
-set_option backward.isDefEq.respectTransparency false in
-instance {X : C} : ((singularChainComplexFunctor C).obj X).PreservesMonomorphisms where
-  preserves f _ := by
-    dsimp [singularChainComplexFunctor, SSet.singularChainComplexFunctor]
-    apply +allowSynthFailures Functor.map_mono
-    apply +allowSynthFailures Functor.map_mono
-    dsimp [SSet] -- Maybe `SSet` should be an abbrev.
-    infer_instance
 
 set_option backward.isDefEq.respectTransparency false in
 /-- The connection map `Hⁿ(X, U) ⟶ Hⁿ⁺¹(U)` on the category of continuous injections `U ⟶ X`. -/

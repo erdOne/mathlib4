@@ -226,7 +226,7 @@ lemma toTop_δ_succ_cone {m : ℕ} (p : Δₜ[n]) (α : Δₜ[m + 1] ⟶ Δₜ[n
     stdSimplex.cone]
   simp only [_root_.SimplexCategory.len_mk, stdSimplex.map_δ_apply, Fin.not_lt_zero, ↓reduceIte,
     gt_iff_lt, Fin.succ_pos, ↓reduceDIte, Fin.coe_ofNat_eq_mod, Nat.zero_mod, Fin.zero_eta,
-    zero_add]
+    zero_add, stdSimplex.proj]
   congr! with _ h
   ext j
   obtain hij | rfl | hij := lt_trichotomy i j
@@ -571,8 +571,6 @@ def projectiveResolutionFunctorOfContractibleSpace
     dsimp
     exact (projectiveResolutionOfContractibleSpace R X.obj).quasiIso
 
-end Homotopy
-
 noncomputable
 def homotopySingularChainComplexSubdivisionContractibleSpaceFuntor
     {C : Type*} [Category* C] [Abelian C] [HasCoproducts.{w} C]
@@ -868,5 +866,55 @@ def homotopySingularChainComplexSubdivision (R : C) (X : TopCat) :
       liftSigmaConstMap_singularChainComplexSubdivision] at this
     erw [liftSigmaConstMap_id] at this
     exact this
+
+end Homotopy
+
+section foo
+
+section
+
+variable (M ι : Type u) [AddCommGroup M]
+
+/-- The coproduct cone induced by the concrete coproduct. -/
+noncomputable
+def finsuppCocone : Cofan fun _ : ι ↦ AddCommGrpCat.of M :=
+  Cofan.mk (AddCommGrpCat.of (ι →₀ M)) fun i ↦
+    AddCommGrpCat.ofHom (Finsupp.singleAddHom i (M := AddCommGrpCat.of M))
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The concrete cocoproduct cone is colimiting. -/
+noncomputable
+def finsuppCoconeIsColimit : IsColimit (finsuppCocone M ι) where
+  desc s := AddCommGrpCat.ofHom (Finsupp.lsum ℤ
+    (N := s.pt) (fun i ↦ (s.ι.app ⟨i⟩).hom.toIntLinearMap)).toAddMonoidHom
+  fac := by aesop (add simp finsuppCocone)
+  uniq s f h := by
+    ext : 1; exact Finsupp.addHom_ext fun i x ↦ by simpa using congr($(h ⟨i⟩) (x : M))
+
+end
+
+noncomputable
+def Sigma.π {C I : Type*} [Category* C] (f : I → C) [HasCoproduct f] [HasZeroMorphisms C]
+    (i : I) : ∐ f ⟶ f i :=
+  letI := Classical.decEq I
+  Sigma.desc fun j ↦ if h : j = i then eqToHom (h ▸ rfl) else 0
+
+@[reassoc (attr := simp)]
+lemma Sigma.ι_π {C I : Type*} [Category* C] (f : I → C) [HasCoproduct f] [HasZeroMorphisms C]
+    (i : I) : Sigma.ι f i ≫ Sigma.π f i = 𝟙 _ := by simp [Sigma.π]
+
+@[reassoc (attr := simp)]
+lemma Sigma.ι_π_of_ne {C I : Type*} [Category* C] (f : I → C) [HasCoproduct f] [HasZeroMorphisms C]
+    (i j : I) (H : i ≠ j) : Sigma.ι f i ≫ Sigma.π f j = 0 := by simp [Sigma.π, H]
+
+noncomputable
+def AddCommGrpCat.sigmaConstIso (X : Ab) (σ : Type _) :
+    (sigmaConst.obj X).obj σ ≅ .of (σ →₀ X) :=
+  (colimit.isColimit _).coconePointUniqueUpToIso (finsuppCoconeIsColimit _ _)
+
+
+end foo
+
+
 
 end AlgebraicTopology

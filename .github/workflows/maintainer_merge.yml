@@ -31,10 +31,14 @@ jobs:
     runs-on: ubuntu-latest
     if: >- # crude check to skip running this on most reviews / comments
       github.repository == 'leanprover-community/mathlib4' &&
+      (github.event_name != 'issue_comment' || github.event.issue.pull_request != null) &&
       (
         contains(format('{0}{1}', github.event.comment.body, github.event.review.body), 'maintainer merge') ||
         contains(format('{0}{1}', github.event.comment.body, github.event.review.body), 'maintainer delegate')
       )
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Find maintainer merge/delegate
         id: merge_or_delegate
@@ -68,7 +72,7 @@ jobs:
 
       - if: ${{ ! steps.merge_or_delegate.outputs.mOrD == '' }}
         name: Emit bridge artifact
-        uses: leanprover-community/privilege-escalation-bridge/emit@d3bd99c50a4cf8c5350a211e8e3ba07ac19067d8 # v1.1.0
+        uses: leanprover-community/privilege-escalation-bridge/emit@f5dfe313a79647c07315b451b2dc2a81a161a50d # v1.2.0
         with:
           artifact: workflow-data
           outputs_file: bridge-outputs.json

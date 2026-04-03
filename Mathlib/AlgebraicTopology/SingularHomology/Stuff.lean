@@ -60,7 +60,8 @@ lemma SSet.stdSimplexToTop_app_app_down (m n) (α) :
   simp [← IsIso.eq_inv_comp, ← NatTrans.naturality]
   rfl
 
-attribute [local simp] SSet.singularChainComplexFunctor SSet.yonedaEquiv_symm_apply_app in
+attribute [local simp] SSet.singularChainComplexFunctor in
+attribute [local simp← ] SSet.yonedaEquiv_symm_comp in
 noncomputable
 def SSet.singularChainComplexFunctorAdjunction : (Functor.postcompose₂.obj (eval _ _ n)).obj
     (SSet.singularChainComplexFunctor C) ⊣ (evaluation _ _).obj Δ[n] where

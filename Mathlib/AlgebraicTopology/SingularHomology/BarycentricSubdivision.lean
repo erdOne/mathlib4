@@ -19,18 +19,11 @@ abbrev StdSimplex.sConvexCombo (I : StdSimplex R M) : M := ConvexSpace.convexCom
 
 -- attribute [positivity] StdSimplex.nonneg
 
-lemma convexCombination_eq_sum' (f : StdSimplex R E) :
-    letI : ConvexSpace R E := AddTorsor.instConvexSpace
-    convexCombination f = f.sum fun i r ↦ r • i := by
-  simp [AddTorsor.convexCombination_eq_affineCombination,
-    Finset.affineCombination_eq_linear_combination _ _ _ f.total, Finsupp.sum]
-
 lemma convexComboPair_eq_add (s t : R) (hs : 0 ≤ s) (ht : 0 ≤ t) (h : s + t = 1) (p q : E) :
     convexComboPair s t hs ht h p q = s • p + t • q := by
   classical
-  simp [convexComboPair, convexCombination_eq_sum', StdSimplex.duple,
+  simp [convexComboPair, convexCombination_eq_sum, StdSimplex.duple,
     Finsupp.sum_add_index, add_smul]
-
 
 lemma StdSimplex.join_assoc (f : StdSimplex R (StdSimplex R (StdSimplex R I))) :
     f.join.join = (f.map (·.join)).join := by
@@ -51,7 +44,7 @@ lemma StdSimplex.join_single (x : StdSimplex R I) :
 
 lemma StdSimplex.weights_join_eq_convexCombination (f : StdSimplex R (StdSimplex R I)) :
     f.join.weights = (f.map StdSimplex.weights).sConvexCombo := by
-  simp [convexCombination_eq_sum', StdSimplex.map, Finsupp.sum_mapDomain_index, add_smul, join]
+  simp [convexCombination_eq_sum, StdSimplex.map, Finsupp.sum_mapDomain_index, add_smul, join]
 
 noncomputable
 instance : ConvexSpace R (StdSimplex R I) where
@@ -134,7 +127,7 @@ lemma StdSimplex.iConvexCombo_congr (s : StdSimplex R I) (f : I ≃ J) (g : I �
 
 lemma StdSimplex.iConvexCombo_eq_sum (f : StdSimplex R I) (g : I → E) :
     f.iConvexCombo g = f.sum fun i r ↦ r • g i := by
-  simp [iConvexCombo, sConvexCombo, convexCombination_eq_sum', map,
+  simp [iConvexCombo, sConvexCombo, convexCombination_eq_sum, map,
     Finsupp.sum_mapDomain_index, add_smul]
 
 lemma convexComboPair_def (s t : R) (hs : 0 ≤ s) (ht : 0 ≤ t) (h : s + t = 1) (p q : M) :
@@ -229,12 +222,12 @@ instance {T : Type*} [PseudoMetricSpace T] [CompactSpace T] : BoundedSpace T :=
 
 open ConvexSpace
 
-lemma coe_def {𝕜 ι : Type*} [Semiring 𝕜] [PartialOrder 𝕜] [Fintype ι]
+lemma stdSimplex.coe_def {𝕜 ι : Type*} [Semiring 𝕜] [PartialOrder 𝕜] [Fintype ι]
     (f : stdSimplex 𝕜 ι) :
     ⇑f = f.val := rfl
 
 @[simp]
-lemma coe_mk {𝕜 ι : Type*} [Semiring 𝕜] [PartialOrder 𝕜] [Fintype ι]
+lemma stdSimplex.coe_mk {𝕜 ι : Type*} [Semiring 𝕜] [PartialOrder 𝕜] [Fintype ι]
     (f : ι → 𝕜) (hf : f ∈ stdSimplex 𝕜 ι) :
     ⇑(⟨f, hf⟩ : stdSimplex 𝕜 ι) = f := rfl
 
@@ -297,12 +290,13 @@ lemma stdSimplex.proj_convexCombination {m : ℕ} (σ : StdSimplex ℝ ↑(stdSi
 
 lemma stdSimplex.convexCombination_apply {ι : Type*} [Fintype ι]
     (f : StdSimplex ℝ ↑(stdSimplex ℝ ι)) (x) :
+    letI : ConvexSpace ℝ ℝ := inferInstance
     ConvexSpace.convexCombination f x = ConvexSpace.convexCombination (f.map (· x)) := by
-  rw [coe_def, Convex.coe_convexCombination, convexCombination_eq_sum]
-  simp [map, Finsupp.sum_mapDomain_index, add_mul, Finsupp.sum_apply',
-    convexCombination_eq_sum, coe_def]
+  rw [coe_def, ofConvex.coe_convexCombination, convexCombination_eq_sum]
+  simp [Finsupp.sum_mapDomain_index, add_mul, Finsupp.sum_apply',
+    convexCombination_eq_sum, coe_def, StdSimplex.map]
 
-noncomputable def cone {m : ℕ} (p : X)
+noncomputable def stdSimplex.cone {m : ℕ} (p : X)
       (α : C(stdSimplex ℝ (Fin m), X)) :
     C(stdSimplex ℝ (Fin (m + 1)), X) where
   toFun σ := convexComboPair (σ 0) (1 - σ 0) (by simp) (by simp) (by simp) p
@@ -319,12 +313,12 @@ noncomputable def cone {m : ℕ} (p : X)
     · exact (continuous_pi fun i ↦ ((continuous_apply i.succ).comp
         (continuous_subtype_val.comp continuous_subtype_val)))
 
-lemma cone_apply_of_eq_one {m : ℕ} (p : X) (α : C(stdSimplex ℝ (Fin m), X))
+lemma stdSimplex.cone_apply_of_eq_one {m : ℕ} (p : X) (α : C(stdSimplex ℝ (Fin m), X))
       (σ : stdSimplex ℝ (Fin (m + 1))) (H : σ 0 = 1) :
     cone p α σ = p := by
   simp [H, cone]
 
-lemma cone_apply {m : ℕ} (p : X) (α : C(stdSimplex ℝ (Fin m), X))
+lemma stdSimplex.cone_apply {m : ℕ} (p : X) (α : C(stdSimplex ℝ (Fin m), X))
       (σ : stdSimplex ℝ (Fin (m + 1))) (σ' : stdSimplex ℝ (Fin m))
       (H : (1 - σ 0) • σ'.1 = σ ∘ Fin.succ) :
     cone p α σ =
@@ -351,7 +345,7 @@ noncomputable def stdSimplex.isAffine_cone {m : ℕ} (p : X)
       suffices x 0 = 1 by simp [this, convexComboPair_same]
       rw [stdSimplex.apply_zero_eq_one_iff] at hs0 ⊢
       replace hs0 : ∀ (i : Fin m), s.sum (fun a r ↦ r • a.1) i.succ = 0 := by
-        simpa [stdSimplex.coe_def, convexCombination_eq_sum', StdSimplex.map,
+        simpa [stdSimplex.coe_def, convexCombination_eq_sum, StdSimplex.map,
           Finsupp.sum_mapDomain_index, add_smul] using hs0
       intro i
       simp only [Finsupp.sum, Finset.sum_apply, Pi.smul_apply, smul_eq_mul] at hs0
@@ -385,7 +379,7 @@ noncomputable def stdSimplex.isAffine_cone {m : ℕ} (p : X)
   congr 1
   · congr 1
     rw [(Finset.filter _ _).sum_eq_zero (by simp_all)]
-    simp [StdSimplex.sConvexCombo, convexCombination_eq_sum', stdSimplex.coe_def,
+    simp [StdSimplex.sConvexCombo, convexCombination_eq_sum, stdSimplex.coe_def,
       StdSimplex.map, Finsupp.sum_mapDomain_index, add_smul]
     simp [Finsupp.sum]
   · rw [← Finset.sum_preimage (ι := { σ // ¬ σ 0 = 1 }) _ _ Subtype.val_injective.injOn]
@@ -394,10 +388,7 @@ noncomputable def stdSimplex.isAffine_cone {m : ℕ} (p : X)
       · simp [x.2, mul_comm]
     · simp_all
 
-
-lemma isAffine_map {X Y : Type*} [Fintype X] [Fintype Y] (f : X → Y) :
+lemma stdSimplex.isAffine_map {X Y : Type*} [Fintype X] [Fintype Y] (f : X → Y) :
     IsAffine ℝ (map (S := ℝ) f) := by
   refine ⟨fun s ↦ ?_⟩
   sorry
-
-end stdSimplex

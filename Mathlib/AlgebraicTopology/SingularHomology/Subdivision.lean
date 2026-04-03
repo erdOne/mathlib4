@@ -11,6 +11,21 @@ public import Mathlib.CategoryTheory.Adjunction.Additive
 public import Mathlib.CategoryTheory.Limits.Shapes.Countable
 public import Mathlib.Topology.Separation.Lemmas
 
+attribute [simp] Finsupp.support_single_ne_zero
+
+namespace StdSimplex
+variable (𝕜 ι : Type*) [Semifield 𝕜] [PartialOrder 𝕜] [PosMulReflectLT 𝕜] [IsOrderedRing 𝕜]
+  [Fintype ι] [CharZero 𝕜] [Nonempty ι]
+
+def barycenter : StdSimplex 𝕜 ι where
+  weights.support := .univ
+  weights.toFun _ := (Fintype.card ι : 𝕜)⁻¹
+  weights.mem_support_toFun _ := by simp
+  nonneg _ := by simp
+  total := by simp [Finsupp.sum]
+
+end StdSimplex
+
 namespace AlgebraicTopology
 
 set_option backward.isDefEq.respectTransparency false
@@ -55,11 +70,6 @@ lemma stdSimplex.mk_apply (𝕜 ι : Type*) [Semiring 𝕜] [PartialOrder 𝕜] 
     (σ) (hσ : σ ∈ stdSimplex 𝕜 ι) (i : ι) :
   (Subtype.mk σ hσ) i = σ i := rfl
 
-@[simps]
-def stdSimplex.barycenter (𝕜 ι : Type*) [Semifield 𝕜] [PartialOrder 𝕜]
-    [PosMulReflectLT 𝕜] [IsOrderedRing 𝕜] [Fintype ι] [CharZero 𝕜] [Nonempty ι] :
-  stdSimplex 𝕜 ι := ⟨fun _ ↦ (Fintype.card ι : 𝕜)⁻¹, by simp, by simp⟩
-
 variable {n}
 
 noncomputable
@@ -76,6 +86,36 @@ instance (n) [Fintype n] : CompactSpace ↑(stdSimplex ℝ n) :=
 
 instance {T : Type*} [PseudoMetricSpace T] [CompactSpace T] : BoundedSpace T :=
   ⟨(isCompact_iff_totallyBounded_isComplete.mp isCompact_univ).1.isBounded⟩
+
+section
+variable (𝕜 ι : Type*) [Field 𝕜] [PartialOrder 𝕜]
+  [PosMulReflectLT 𝕜] [IsOrderedRing 𝕜] [Fintype ι] [CharZero 𝕜] [Nonempty ι]
+
+@[simps]
+def stdSimplex.barycenter : stdSimplex 𝕜 ι := ⟨fun _ ↦ (Fintype.card ι : 𝕜)⁻¹, by simp, by simp⟩
+
+variable [DecidableEq ι]
+
+lemma stdSimplex.iConvexCombo_barycenter :
+    StdSimplex.iConvexCombo (.barycenter ℝ ι) stdSimplex.vertex = stdSimplex.barycenter ℝ ι := by
+  ext
+  simp [StdSimplex.iConvexCombo, StdSimplex.barycenter, stdSimplex.barycenter, -coe_apply,
+    stdSimplex.coe_def, convexCombination_eq_sum, StdSimplex.map, add_smul,
+    Finsupp.sum_mapDomain_index, Finsupp.sum_fintype, Pi.single_apply]
+
+variable {X : Type*}
+
+open stdSimplex
+
+lemma dist_barycenter_left_le (f : StdSimplex ℝ X) (x : stdSimplex ℝ ι) :
+    dist (barycenter ℝ ι) x ≤ ∑ i, (Fintype.card ι : ℝ)⁻¹ * dist (stdSimplex.vertex i) x := by
+  simpa [← iConvexCombo_barycenter] using dist_barycenter_map_le f id (fun _ ↦ x)
+
+lemma dist_barycenter_right_le (f : StdSimplex ℝ X) (x : X) :
+    dist x (barycenter f) ≤ f.weights.sum fun i r ↦ r * dist x i := by
+  simpa using dist_convexCombination_map_le f (fun _ ↦ x) id
+
+end
 
 noncomputable def SimplexCategory.cone {m : ℕ} (p : Δₜ[n]) (α : Δₜ[m] ⟶ Δₜ[n]) :
     Δₜ[m + 1] ⟶ Δₜ[n] :=
@@ -830,23 +870,71 @@ def boundary {M : Ab.{u}} {X : Type*} [TopologicalSpace X] {n : ℕ} :
   Finsupp.liftAddHom fun σ ↦ ∑ i : Fin (n + 1),
     (-1) ^ i.1 • Finsupp.singleAddHom (σ.comp ⟨_, stdSimplex.continuous_map (Fin.succAbove i)⟩)
 
-variable {M : Ab} {X : Type u}
-  [MetricSpace X] [ConvexSpace ℝ X] [IsConvexMetricSpace X] [BoundedSpace X]
+variable {M : Ab} {X : Type u} [MetricSpace X]
 
 noncomputable
-def bary : ∀ (n : ℕ),
+def diam (σ : C(stdSimplex ℝ (Fin n), X) →₀ M) : NNReal :=
+  σ.support.sup fun α ↦ Finset.univ.sup fun ij : Fin n × Fin n ↦
+    nndist (α (stdSimplex.vertex ij.1)) (α (stdSimplex.vertex ij.2))
+
+@[simp] lemma diam_zero : diam (0 : C(stdSimplex ℝ (Fin n), X) →₀ M) = 0 := by simp [diam]
+
+lemma diam_add_le (σ τ : C(stdSimplex ℝ (Fin n), X) →₀ M) : diam (σ + τ) ≤ diam σ ⊔ diam τ := by
+  classical unfold diam; grw [Finsupp.support_add, Finset.sup_union]
+
+lemma diam_add {σ τ : C(stdSimplex ℝ (Fin n), X) →₀ M} (h : Disjoint σ.support τ.support) :
+    diam (σ + τ) = diam σ ⊔ diam τ := by
+  classical unfold diam; rw [Finsupp.support_add_eq h, Finset.sup_union]
+
+lemma diam_boundary_le (σ : C(stdSimplex ℝ (Fin (n + 1)), X) →₀ M) :
+    diam (boundary σ) ≤ diam σ := by
+  classical
+  simp only [diam, boundary, Int.reduceNeg, Finsupp.liftAddHom_apply]
+  grw [Finsupp.support_sum, Finset.sup_biUnion]
+  gcongr with α hα
+  simp only [Int.reduceNeg, AddMonoidHom.finset_sum_apply, AddMonoidHom.smul_apply,
+    Finsupp.singleAddHom_apply, Finsupp.smul_single]
+  grw [Finsupp.support_finset_sum, Finset.sup_biUnion]
+  simp only [Finset.sup_le_iff, Finset.mem_univ, Finsupp.mem_support_iff,
+    Finsupp.single_apply, ne_eq, ite_eq_right_iff, Classical.not_imp, forall_const, Prod.forall,
+    and_imp, forall_eq', ContinuousMap.comp_apply, ContinuousMap.coe_mk, stdSimplex.map_vertex]
+  rintro i - j k
+  exact Finset.le_sup_of_le (Finset.mem_univ (_, _)) le_rfl
+
+variable [ConvexSpace ℝ X] [IsConvexMetricSpace X] [BoundedSpace X]
+
+noncomputable
+def bary : ∀ ⦃n⦄,
     (C(stdSimplex ℝ (Fin n), X) →₀ M) →+ (C(stdSimplex ℝ (Fin n), X) →₀ M) :=
   Nat.rec (.id _) fun _ α ↦ Finsupp.liftAddHom fun σ ↦
     .comp (.comp (.comp (Finsupp.lmapDomain _ ℤ (stdSimplex.cone (σ
       (stdSimplex.barycenter _ _)))).toAddMonoidHom α) boundary) (Finsupp.singleAddHom σ)
 
-noncomputable
-def diam (σ : C(stdSimplex ℝ (Fin n), X) →₀ M) : NNReal :=
-  σ.support.sup fun α ↦ (Finset.univ ×ˢ Finset.univ).sup fun ij ↦
-    nndist (α ⟨_, single_mem_stdSimplex _ ij.1⟩) (α ⟨_, single_mem_stdSimplex _ ij.2⟩)
+lemma diam_bary_single (α : C(stdSimplex ℝ (Fin (n + 1)), X)) {m : M} (hm : m ≠ 0) :
+    diam (bary (.single α m)) =
+      Finset.univ.sup
+        (fun i ↦ nndist (α <| stdSimplex.vertex i) (α <| stdSimplex.barycenter ..)) ⊔
+        diam (bary (boundary (.single α m))) := by
+  sorry
 
-example (σ : C(stdSimplex ℝ (Fin n), X) →₀ M) :
-    diam (bary _ σ) ≤ (n / (n + 1)) * diam σ := by
+example (σ : C(stdSimplex ℝ (Fin n), X) →₀ M) (hσ : ∀ α ∈ σ.support, ConvexSpace.IsAffine ℝ α) :
+    diam (bary σ) ≤ (n / (n + 1)) * diam σ := by
+  induction n with
+  | zero => simp [bary, diam, ← bot_eq_zero (α := NNReal), -bot_eq_zero']
+  | succ n ihn =>
+  induction σ using Finsupp.induction with
+  | zero => simp
+  | single_add α m σ hα hm ihσ =>
+  grw [map_add, diam_add_le, diam_add (by simp [*]), mul_max, diam_bary_single _ hm, ihn,
+    diam_boundary_le]
+  gcongr
+  simp only [Nat.cast_add, Nat.cast_one, sup_le_iff, Finset.sup_le_iff, Finset.mem_univ,
+    forall_const]
+  refine ⟨fun i ↦ ?_, by gcongr ?_ * _; field_simp; simp [mul_add, sq, add_mul]⟩
+  rw [← stdSimplex.iConvexCombo_barycenter]
+
+
+  · gcongr
   sorry
 
 -- noncomputable
@@ -862,4 +950,3 @@ example (σ : C(stdSimplex ℝ (Fin n), X) →₀ M) :
 end foo
 
 end AlgebraicTopology
-#min_imports

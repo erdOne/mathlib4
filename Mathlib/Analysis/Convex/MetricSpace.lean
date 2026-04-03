@@ -37,11 +37,19 @@ that has little to do with this definition.
 
 @[expose] public section
 
+namespace NNReal
+variable {ι M : Type*} [AddCommMonoid M]
+
+@[simp] lemma coe_finsuppSum (f : ι →₀ M) (g : ι → M → ℝ≥0) :
+    (f.sum g).toReal = f.sum (fun i m ↦ (g i m).toReal) := NNReal.coe_sum ..
+
+end NNReal
+
 namespace Convexity
 
 open ConvexSpace
 
-variable {X : Type*} [ConvexSpace ℝ X] [MetricSpace X]
+variable {I X : Type*} [ConvexSpace ℝ X] [MetricSpace X]
 
 variable (X) in
 /-- A convex metric space is a real convex space with a compatible metric structure.
@@ -91,6 +99,25 @@ lemma dist_sConvexCombo_left_le (f : StdSimplex ℝ X) (x : X) :
 lemma dist_sConvexCombo_right_le (f : StdSimplex ℝ X) (x : X) :
     dist x f.sConvexCombo ≤ f.weights.sum fun i r ↦ r * dist x i := by
   simpa using dist_iConvexCombo_le f (fun _ ↦ x) id
+
+lemma dist_iConvexCombo_left_le (f : StdSimplex ℝ I) (g : I → X) (x : X) :
+    dist (f.iConvexCombo g) x ≤ f.weights.sum fun i r ↦ r * dist (g i) x := by
+  simpa using dist_iConvexCombo_le f g (fun _ ↦ x)
+
+lemma dist_iConvexCombo_right_le (f : StdSimplex ℝ I) (g : I → X) (x : X) :
+    dist x (f.iConvexCombo g) ≤ f.weights.sum fun i r ↦ r * dist x (g i) := by
+  simpa using dist_iConvexCombo_le f (fun _ ↦ x) g
+
+lemma nndist_iConvexCombo_left_le (f : StdSimplex ℝ I) (g : I → X) (x : X) :
+    nndist (f.iConvexCombo g) x ≤ f.weights.sum fun i r ↦ r.toNNReal * nndist (g i) x := by
+  grw [← dist_le_coe, dist_iConvexCombo_left_le f g x, NNReal.coe_finsuppSum]
+  gcongr with i x
+  have := f.nonneg i
+  simp_all
+
+lemma nndist_iConvexCombo_right_le (f : StdSimplex ℝ I) (g : I → X) (x : X) :
+    nndist x (f.iConvexCombo g) ≤ f.weights.sum fun i r ↦ r.toNNReal * nndist x (g i) := by
+  simpa [nndist_comm] using nndist_iConvexCombo_left_le ..
 
 @[simp]
 lemma dist_convexComboPair_left

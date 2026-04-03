@@ -13,10 +13,11 @@ public import Mathlib.Topology.Separation.Lemmas
 
 attribute [simp] Finsupp.support_single_ne_zero
 
-namespace StdSimplex
+namespace Convexity.StdSimplex
 variable (𝕜 ι : Type*) [Semifield 𝕜] [PartialOrder 𝕜] [PosMulReflectLT 𝕜] [IsOrderedRing 𝕜]
   [Fintype ι] [CharZero 𝕜] [Nonempty ι]
 
+@[simps]
 def barycenter : StdSimplex 𝕜 ι where
   weights.support := .univ
   weights.toFun _ := (Fintype.card ι : 𝕜)⁻¹
@@ -24,15 +25,7 @@ def barycenter : StdSimplex 𝕜 ι where
   nonneg _ := by simp
   total := by simp [Finsupp.sum]
 
-end StdSimplex
-
-namespace AlgebraicTopology
-
-set_option backward.isDefEq.respectTransparency false
-
-open SSet CategoryTheory Limits
-
-attribute [-simp] SimplexCategory.toTop_obj SimplexCategory.toTop_map
+end Convexity.StdSimplex
 
 @[simp]
 lemma Fin.castSucc_eq_zero {n} {i : Fin n} : i.castSucc = 0 ↔ i.1 = 0 := by
@@ -49,6 +42,16 @@ lemma Fin.succAbove_eq_zero {n} {i : Fin (n + 1)} {j : Fin n} :
 lemma Fin.succAbove_eq_iff {n} {i k : Fin (n + 1)} {j : Fin n} :
     i.succAbove j = k ↔ if i.1 ≤ j.1 then j.1 + 1 = k.1 else j.1 = k.1 := by
   delta Fin.succAbove; grind [Fin.lt_def]
+
+open Convexity
+
+namespace AlgebraicTopology
+
+set_option backward.isDefEq.respectTransparency false
+
+open SSet CategoryTheory Limits
+
+attribute [-simp] SimplexCategory.toTop_obj SimplexCategory.toTop_map
 
 universe w v u
 
@@ -70,23 +73,6 @@ lemma stdSimplex.mk_apply (𝕜 ι : Type*) [Semiring 𝕜] [PartialOrder 𝕜] 
     (σ) (hσ : σ ∈ stdSimplex 𝕜 ι) (i : ι) :
   (Subtype.mk σ hσ) i = σ i := rfl
 
-variable {n}
-
-noncomputable
-instance (n) [Fintype n] : ConvexSpace ℝ ↑(stdSimplex ℝ n) := .ofConvex (convex_stdSimplex _ _)
-
-instance (n) [Fintype n] : IsConvexMetricSpace ↑(stdSimplex ℝ n) :=
-  .of_convex (convex_stdSimplex _ _)
-
-instance (n) [Fintype n] : CompactSpace ↑(stdSimplex ℝ n) :=
-  isCompact_iff_compactSpace.mp (isCompact_stdSimplex _ _)
-
-instance (n) [Fintype n] : CompactSpace ↑(stdSimplex ℝ n) :=
-  isCompact_iff_compactSpace.mp (isCompact_stdSimplex _ _)
-
-instance {T : Type*} [PseudoMetricSpace T] [CompactSpace T] : BoundedSpace T :=
-  ⟨(isCompact_iff_totallyBounded_isComplete.mp isCompact_univ).1.isBounded⟩
-
 section
 variable (𝕜 ι : Type*) [Field 𝕜] [PartialOrder 𝕜]
   [PosMulReflectLT 𝕜] [IsOrderedRing 𝕜] [Fintype ι] [CharZero 𝕜] [Nonempty ι]
@@ -100,24 +86,28 @@ lemma stdSimplex.iConvexCombo_barycenter :
     StdSimplex.iConvexCombo (.barycenter ℝ ι) stdSimplex.vertex = stdSimplex.barycenter ℝ ι := by
   ext
   simp [StdSimplex.iConvexCombo, StdSimplex.barycenter, stdSimplex.barycenter, -coe_apply,
-    stdSimplex.coe_def, convexCombination_eq_sum, StdSimplex.map, add_smul,
+    stdSimplex.coe_def, sConvexCombo_eq_sum, StdSimplex.map, add_smul,
     Finsupp.sum_mapDomain_index, Finsupp.sum_fintype, Pi.single_apply]
 
 variable {X : Type*}
 
-open stdSimplex
+open stdSimplex StdSimplex
 
-lemma dist_barycenter_left_le (f : StdSimplex ℝ X) (x : stdSimplex ℝ ι) :
-    dist (barycenter ℝ ι) x ≤ ∑ i, (Fintype.card ι : ℝ)⁻¹ * dist (stdSimplex.vertex i) x := by
-  simpa [← iConvexCombo_barycenter] using dist_barycenter_map_le f id (fun _ ↦ x)
+lemma dist_barycenter_left_le (x : stdSimplex ℝ ι) :
+    dist (stdSimplex.barycenter ℝ ι) x ≤
+      ∑ i, (Fintype.card ι : ℝ)⁻¹ * dist (stdSimplex.vertex i) x := by
+  simpa [← iConvexCombo_barycenter] using dist_iConvexCombo_left_le ..
 
-lemma dist_barycenter_right_le (f : StdSimplex ℝ X) (x : X) :
-    dist x (barycenter f) ≤ f.weights.sum fun i r ↦ r * dist x i := by
-  simpa using dist_convexCombination_map_le f (fun _ ↦ x) id
+lemma dist_barycenter_right_le (x : stdSimplex ℝ ι) :
+    dist x (stdSimplex.barycenter ℝ ι) ≤
+      ∑ i, (Fintype.card ι : ℝ)⁻¹ * dist x (stdSimplex.vertex i) := by
+  simpa [← iConvexCombo_barycenter] using dist_iConvexCombo_right_le ..
 
 end
 
-noncomputable def SimplexCategory.cone {m : ℕ} (p : Δₜ[n]) (α : Δₜ[m] ⟶ Δₜ[n]) :
+variable {m n : ℕ}
+
+noncomputable def SimplexCategory.cone (p : Δₜ[n]) (α : Δₜ[m] ⟶ Δₜ[n]) :
     Δₜ[m + 1] ⟶ Δₜ[n] :=
   TopCat.uliftFunctor.{w}.map (TopCat.ofHom (stdSimplex.cone (ULift.down.{w} p)
     ⟨ULift.down.{w} ∘ α.hom ∘ ULift.up.{w}, by fun_prop⟩))
@@ -877,6 +867,11 @@ def diam (σ : C(stdSimplex ℝ (Fin n), X) →₀ M) : NNReal :=
   σ.support.sup fun α ↦ Finset.univ.sup fun ij : Fin n × Fin n ↦
     nndist (α (stdSimplex.vertex ij.1)) (α (stdSimplex.vertex ij.2))
 
+lemma nndist_le_diam {σ : C(stdSimplex ℝ (Fin n), X) →₀ M} {α : C(stdSimplex ℝ (Fin n), X)}
+    (hα : α ∈ σ.support) {i j : Fin n} :
+    nndist (α (stdSimplex.vertex i)) (α (stdSimplex.vertex j)) ≤ diam σ :=
+  Finset.le_sup_of_le hα <| Finset.le_sup_of_le (Finset.mem_univ (i, j)) le_rfl
+
 @[simp] lemma diam_zero : diam (0 : C(stdSimplex ℝ (Fin n), X) →₀ M) = 0 := by simp [diam]
 
 lemma diam_add_le (σ τ : C(stdSimplex ℝ (Fin n), X) →₀ M) : diam (σ + τ) ≤ diam σ ⊔ diam τ := by
@@ -901,7 +896,7 @@ lemma diam_boundary_le (σ : C(stdSimplex ℝ (Fin (n + 1)), X) →₀ M) :
   rintro i - j k
   exact Finset.le_sup_of_le (Finset.mem_univ (_, _)) le_rfl
 
-variable [ConvexSpace ℝ X] [IsConvexMetricSpace X] [BoundedSpace X]
+variable [ConvexSpace ℝ X] [ConvexSpace.IsMetricCompatible X] [BoundedSpace X]
 
 noncomputable
 def bary : ∀ ⦃n⦄,
@@ -917,24 +912,31 @@ lemma diam_bary_single (α : C(stdSimplex ℝ (Fin (n + 1)), X)) {m : M} (hm : m
         diam (bary (boundary (.single α m))) := by
   sorry
 
-example (σ : C(stdSimplex ℝ (Fin n), X) →₀ M) (hσ : ∀ α ∈ σ.support, ConvexSpace.IsAffine ℝ α) :
-    diam (bary σ) ≤ (n / (n + 1)) * diam σ := by
+example (σ : C(stdSimplex ℝ (Fin n), X) →₀ M) (hσ : ∀ α ∈ σ.support, IsAffineMap ℝ α) :
+    diam (bary σ) ≤ ((n - 1) / n) * diam σ := by
   induction n with
   | zero => simp [bary, diam, ← bot_eq_zero (α := NNReal), -bot_eq_zero']
   | succ n ihn =>
   induction σ using Finsupp.induction with
   | zero => simp
   | single_add α m σ hα hm ihσ =>
-  grw [map_add, diam_add_le, diam_add (by simp [*]), mul_max, diam_bary_single _ hm, ihn,
+  classical
+  rw [Finsupp.support_add_eq (by simp [*])] at hσ
+  simp only [ne_eq, hm, not_false_eq_true, Finsupp.support_single_ne_zero, Finset.singleton_union,
+    Finset.mem_insert, Finsupp.mem_support_iff, or_imp, forall_and, forall_eq] at hσ ihn ihσ
+  grw [map_add, diam_add_le, diam_add (by simp [*]), mul_max, diam_bary_single _ hm, ihn, ihσ hσ.2,
     diam_boundary_le]
-  gcongr
-  simp only [Nat.cast_add, Nat.cast_one, sup_le_iff, Finset.sup_le_iff, Finset.mem_univ,
-    forall_const]
-  refine ⟨fun i ↦ ?_, by gcongr ?_ * _; field_simp; simp [mul_add, sq, add_mul]⟩
-  rw [← stdSimplex.iConvexCombo_barycenter]
-
-
   · gcongr
+    simp only [Nat.cast_add, Nat.cast_one, sup_le_iff, Finset.sup_le_iff, Finset.mem_univ,
+      forall_const]
+    refine ⟨fun i ↦ ?_, by cases n; (· simp); gcongr ?_ * _; field_simp; simp [mul_add, add_mul]⟩
+    grw [← stdSimplex.iConvexCombo_barycenter, hσ.1.map_iConvexCombo, nndist_iConvexCombo_right_le]
+    simp [Finsupp.sum, Real.toNNReal_inv, ← Finset.mul_sum]
+    field_simp
+    grw [← Finset.sum_erase _ (a := i) (by simp)]
+    convert Finset.sum_le_card_nsmul _ _ (diam <| .single α m) fun i _ ↦ ?_ using 1
+    · simp
+    · exact nndist_le_diam (by simpa)
   sorry
 
 -- noncomputable

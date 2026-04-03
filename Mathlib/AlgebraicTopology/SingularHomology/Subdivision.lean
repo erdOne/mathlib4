@@ -1,6 +1,15 @@
-import Mathlib
-import Mathlib.AlgebraicTopology.SingularHomology.Stuff
-import Mathlib.AlgebraicTopology.SingularHomology.BarycentricSubdivision
+module
+
+public import Mathlib.Algebra.Category.Grp.Abelian
+public import Mathlib.Algebra.Category.Grp.EpiMono
+public import Mathlib.Algebra.Homology.Functor
+public import Mathlib.AlgebraicTopology.SingularHomology.BarycentricSubdivision
+public import Mathlib.AlgebraicTopology.SingularHomology.Stuff
+public import Mathlib.Analysis.Convex.Contractible
+public import Mathlib.CategoryTheory.Abelian.Projective.Resolution
+public import Mathlib.CategoryTheory.Adjunction.Additive
+public import Mathlib.CategoryTheory.Limits.Shapes.Countable
+public import Mathlib.Topology.Separation.Lemmas
 
 namespace AlgebraicTopology
 
@@ -9,6 +18,22 @@ set_option backward.isDefEq.respectTransparency false
 open SSet CategoryTheory Limits
 
 attribute [-simp] SimplexCategory.toTop_obj SimplexCategory.toTop_map
+
+@[simp]
+lemma Fin.castSucc_eq_zero {n} {i : Fin n} : i.castSucc = 0 ↔ i.1 = 0 := by
+  simp [← Fin.val_eq_zero_iff]
+
+@[simp]
+lemma Fin.succAbove_eq_zero {n} {i : Fin (n + 1)} {j : Fin n} :
+    i.succAbove j = 0 ↔ i ≠ 0 ∧ j.1 = 0 := by
+  delta Fin.succAbove
+  split_ifs
+  · simp; grind
+  · simp_all [Fin.le_iff_val_le_val]; grind
+
+lemma Fin.succAbove_eq_iff {n} {i k : Fin (n + 1)} {j : Fin n} :
+    i.succAbove j = k ↔ if i.1 ≤ j.1 then j.1 + 1 = k.1 else j.1 = k.1 := by
+  delta Fin.succAbove; grind [Fin.lt_def]
 
 universe w v u
 
@@ -35,148 +60,27 @@ def stdSimplex.barycenter (𝕜 ι : Type*) [Semifield 𝕜] [PartialOrder 𝕜]
     [PosMulReflectLT 𝕜] [IsOrderedRing 𝕜] [Fintype ι] [CharZero 𝕜] [Nonempty ι] :
   stdSimplex 𝕜 ι := ⟨fun _ ↦ (Fintype.card ι : 𝕜)⁻¹, by simp, by simp⟩
 
--- noncomputable
--- def stdSimplex.extend {n E : Type*} [AddCommGroup E] [Module ℝ E]
---     [Fintype n] (α : stdSimplex ℝ n → E) (σ : {f : n → ℝ // 0 ≤ f}) : E :=
---   if hσ : σ = 0 then 0 else (∑ i, σ.1 i) • α ⟨(∑ i, σ.1 i)⁻¹ • σ,
---     fun i ↦ mul_nonneg (inv_nonneg.mpr (Finset.sum_nonneg fun _ _ ↦ σ.2 _)) (σ.2 _), by
---     suffices ∑ i, σ.1 i ≠ 0 by simp [← Finset.mul_sum, this]
---     simpa [Finset.sum_eq_zero_iff_of_nonneg fun i _ ↦ σ.2 i, Subtype.ext_iff, funext_iff] using hσ⟩
-
--- lemma stdSimplex.extend_eq_of_sum_eq {n E : Type*} [AddCommGroup E] [Module ℝ E]
---     [Fintype n] (α : stdSimplex ℝ n → E) (σ : {f : n → ℝ // 0 ≤ f})
---     (k : ℝ) (hk : k = ∑ i, σ.1 i) :
---     stdSimplex.extend α σ = if hk0 : k = 0 then 0 else k • α ⟨k⁻¹ • σ, fun i ↦
---       have : 0 ≤ k := by simpa [hk] using Finset.sum_nonneg fun i _ ↦ σ.2 i;
---       mul_nonneg (by simpa) (by simpa using σ.2 i), by simp [← Finset.mul_sum, ← hk, hk0]⟩ := by
---   subst hk
---   refine dite_congr ?_ (fun _ ↦ rfl) (fun _ ↦ by congr)
---   simp [Finset.sum_eq_zero_iff_of_nonneg fun i _ ↦ σ.2 i, Subtype.ext_iff, funext_iff]
-
--- lemma stdSimplex.extend_nonneg {m n : Type*}
---     [Fintype n] [Fintype m] (α : stdSimplex ℝ n → stdSimplex ℝ m) (σ : {f : n → ℝ // 0 ≤ f}) :
---     0 ≤ stdSimplex.extend (Subtype.val ∘ α) σ := by
---   intro i
---   dsimp [extend]
---   split_ifs
---   · rfl
---   · exact mul_nonneg (Finset.sum_nonneg fun i _ ↦ σ.2 i) ((α _).2.1 _)
-
--- lemma stdSimplex.sum_extend {m n : Type*}
---     [Fintype n] [Fintype m] (α : stdSimplex ℝ n → stdSimplex ℝ m) (σ : {f : n → ℝ // 0 ≤ f}) :
---     ∑ i, stdSimplex.extend (Subtype.val ∘ α) σ i = ∑ i, σ.1 i := by
---   dsimp [extend]
---   split_ifs
---   · simp_all
---   · simp [← Finset.mul_sum]
-
--- @[simp]
--- lemma stdSimplex.extend_mk {n E : Type*} [AddCommGroup E] [Module ℝ E]
---     [Fintype n] (α : stdSimplex ℝ n → E) (σ : stdSimplex ℝ n) :
---     stdSimplex.extend α ⟨σ.1, σ.2.1⟩ = α σ := by
---   dsimp [stdSimplex.extend]
---   rw [dif_neg]
---   · simp
---   · aesop (add simp stdSimplex)
-
--- @[fun_prop]
--- lemma stdSimplex.continuous_extend
---     {n E : Type*} [SeminormedAddCommGroup E] [NormedSpace ℝ E]
---     [Fintype n] (α : stdSimplex ℝ n → E) (hα : Continuous α) :
---     Continuous (stdSimplex.extend α) := by
---     refine continuous_iff_continuousAt.mpr fun x ↦ ?_
---     unfold extend
---     obtain rfl | hx := eq_or_ne x 0
---     · obtain ⟨C, hC⟩ := IsCompact.exists_bound_of_continuousOn isCompact_univ hα.continuousOn
---       simp only [ContinuousAt, ↓reduceDIte]
---       refine squeeze_zero_norm (a := fun a ↦ (∑ i, |a.1 i|) * |C|) (fun f ↦ ?_) ?_
---       · split_ifs
---         · simp only [norm_zero]; positivity
---         · simp only [norm_smul, Real.norm_eq_abs]
---           gcongr
---           · exact Finset.abs_sum_le_sum_abs ..
---           · exact (hC _ trivial).trans (le_abs_self _)
---       · suffices Continuous fun a : {f : n → ℝ // 0 ≤ f} ↦ (∑ i, |a.1 i|) * |C| by
---           simpa [ContinuousAt] using this.continuousAt (x := 0)
---         exact .mul (continuous_finset_sum _
---           fun _ _ ↦ .abs ((continuous_apply _).comp continuous_subtype_val)) (by fun_prop)
---     · generalize_proofs H
---       suffices Continuous fun f : {f : {f : n → ℝ // 0 ≤ f} // f ≠ 0} ↦
---           (∑ i, f.1.1 i) • α ⟨_, H f.1 f.2⟩ by
---         refine (Topology.IsInducing.continuousAt_iff'
---           (X := {f : {f : n → ℝ // 0 ≤ f} // f ≠ 0}) (x := ⟨x, hx⟩) (.induced Subtype.val)
---           (IsOpen.mem_nhds ?_ (by simpa))).mp ?_
---         · convert isClosed_singleton (x := (0 : {f : n → ℝ // 0 ≤ f})).isOpen_compl; ext; simp
---         · convert this.continuousAt (x := ⟨x, hx⟩) with y
---           simp [y.2]
---       have (f : {f : {f : n → ℝ // 0 ≤ f} // f ≠ 0}) : ∑ i, f.1.1 i ≠ 0 := by
---         simpa [Finset.sum_eq_zero_iff_of_nonneg fun i _ ↦ f.1.2 i, Subtype.ext_iff,
---           funext_iff] using f.2
---       fun_prop (discharger := assumption)
-
 variable {n}
 
 noncomputable
-instance (n) [Fintype n] : ConvexSpace ℝ ↑(stdSimplex ℝ n) :=
-  .ofConvex (convex_stdSimplex _ _)
+instance (n) [Fintype n] : ConvexSpace ℝ ↑(stdSimplex ℝ n) := .ofConvex (convex_stdSimplex _ _)
 
-noncomputable
 instance (n) [Fintype n] : IsConvexMetricSpace ↑(stdSimplex ℝ n) :=
   .of_convex (convex_stdSimplex _ _)
 
-noncomputable
 instance (n) [Fintype n] : CompactSpace ↑(stdSimplex ℝ n) :=
   isCompact_iff_compactSpace.mp (isCompact_stdSimplex _ _)
 
-noncomputable
 instance (n) [Fintype n] : CompactSpace ↑(stdSimplex ℝ n) :=
   isCompact_iff_compactSpace.mp (isCompact_stdSimplex _ _)
 
-noncomputable
 instance {T : Type*} [PseudoMetricSpace T] [CompactSpace T] : BoundedSpace T :=
   ⟨(isCompact_iff_totallyBounded_isComplete.mp isCompact_univ).1.isBounded⟩
-
--- noncomputable def stdSimplex.cone {m : ℕ} (p : stdSimplex ℝ (Fin n))
---       (α : C(stdSimplex ℝ (Fin m), stdSimplex ℝ (Fin n))) :
---     C(stdSimplex ℝ (Fin (m + 1)), stdSimplex ℝ (Fin n)) where
---   toFun σ := ⟨σ 0 • ↑p + stdSimplex.extend (Subtype.val ∘ α) ⟨σ ∘ Fin.succ, fun i ↦ by simp⟩,
---       add_nonneg (smul_nonneg (σ.2.1 _) p.2.1) (stdSimplex.extend_nonneg α _), by
---       simp [Finset.sum_add_distrib, ← Finset.mul_sum, stdSimplex.sum_extend, ← Fin.sum_univ_succ]⟩
---   continuous_toFun := by
---     refine continuous_induced_rng.mpr (continuous_pi fun i ↦ .add (.mul
---       ((continuous_apply _).comp continuous_subtype_val) (by fun_prop))
---       ((continuous_apply _).comp ((continuous_extend (Subtype.val ∘ α) (by fun_prop)).comp' ?_)))
---     exact continuous_induced_rng.mpr
---       (continuous_pi fun i ↦ ((continuous_apply i.succ).comp continuous_subtype_val))
-
--- lemma stdSimplex.cone_apply {m : ℕ} (p : stdSimplex ℝ (Fin n))
---       (α : C(stdSimplex ℝ (Fin m), stdSimplex ℝ (Fin n)))
---       (σ : stdSimplex ℝ (Fin (m + 1))) (i : Fin n) :
---     stdSimplex.cone p α σ i = σ 0 • p i +
---       stdSimplex.extend (Subtype.val ∘ α) ⟨σ ∘ Fin.succ, fun i ↦ by simp⟩ i := by
---   sorry
 
 noncomputable def SimplexCategory.cone {m : ℕ} (p : Δₜ[n]) (α : Δₜ[m] ⟶ Δₜ[n]) :
     Δₜ[m + 1] ⟶ Δₜ[n] :=
   TopCat.uliftFunctor.{w}.map (TopCat.ofHom (stdSimplex.cone (ULift.down.{w} p)
     ⟨ULift.down.{w} ∘ α.hom ∘ ULift.up.{w}, by fun_prop⟩))
-
-@[simp]
-lemma Fin.castSucc_eq_zero {n} {i : Fin n} :
-    i.castSucc = 0 ↔ i.1 = 0 := by
-  simp [← Fin.val_eq_zero_iff]
-
-@[simp]
-lemma Fin.succAbove_eq_zero {n} {i : Fin (n + 1)} {j : Fin n} :
-    i.succAbove j = 0 ↔ i ≠ 0 ∧ j.1 = 0 := by
-  delta Fin.succAbove
-  split_ifs
-  · simp; grind
-  · simp_all [Fin.le_iff_val_le_val]; grind
-
-lemma Fin.succAbove_eq_iff {n} {i k : Fin (n + 1)} {j : Fin n} :
-    i.succAbove j = k ↔ if i.1 ≤ j.1 then j.1 + 1 = k.1 else j.1 = k.1 := by
-  delta Fin.succAbove; grind [Fin.lt_def]
 
 /-- This unification hint helps with problems of the form `(forget ?C).obj R =?= carrier R'`. -/
 unif_hint SimplexCategory.len_mk (n : ℕ) where ⊢
@@ -805,9 +709,8 @@ lemma liftSigmaConstMap_singularChainComplexSubdivision (X) (i) :
       ((singularChainComplexSubdivision.app R).app X).f i := by
   induction i generalizing X with
   | zero =>
-    simp only [sigmaConst_obj_obj, singularChainComplexSubdivision,
-      singularChainComplexSubdivisionAppF, Nat.zero_eq, NatTrans.id_app, Functor.comp_obj,
-      HomologicalComplex.eval_obj]
+    simp only [sigmaConst_obj_obj, singularChainComplexSubdivision, Functor.comp_obj,
+      singularChainComplexSubdivisionAppF, Nat.zero_eq, HomologicalComplex.eval_obj]
     exact liftSigmaConstMap_id ..
   | succ n IH =>
     refine Sigma.hom_ext _ _ fun σ ↦ ?_
@@ -950,17 +853,13 @@ example (σ : C(stdSimplex ℝ (Fin n), X) →₀ M) :
 -- def singularChainComplexFunctor.Chain.δ {M : Ab.{u}} {X : TopCat.{u}} :
 --     (TopCat.toSSet.obj X _⦋n + 1⦌ →₀ M) →+ (TopCat.toSSet.obj X _⦋n⦌ →₀ M) := sorry
 
-
 -- lemma foo (M : Ab) {X : Type*} [MetricSpace X] [ConvexSpace ℝ X] [IsConvexMetricSpace X]
 --     (σ : TopCat.toSSet.obj (.of X) _⦋n + 1⦌ →₀ M) :
 --     ((singularChainComplexSubdivision.app M).app (.of X)).f _ (mk.hom.hom σ) =
 --       mk.hom.hom ((δ σ).mapDomain _) := by
 --   sorry
 
-
-
 end foo
 
-
-
 end AlgebraicTopology
+#min_imports

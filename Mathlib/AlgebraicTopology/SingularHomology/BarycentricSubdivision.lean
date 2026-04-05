@@ -135,7 +135,24 @@ lemma stdSimplex.cone_apply {m : ℕ} (p : X) (α : C(stdSimplex ℝ (Fin m), X)
   · simp [h, convexComboPair_one, cone_apply_of_eq_one]
   · simp [cone, proj, h, ← H, show 1 - σ 0 ≠ 0 by simpa [sub_eq_zero] using Ne.symm h]
 
-noncomputable def stdSimplex.isAffine_cone {m : ℕ} (p : X) (α : C(stdSimplex ℝ (Fin m), X))
+@[simp]
+lemma stdSimplex.cone_vertex_zero {m : ℕ} (p : X) (α : C(stdSimplex ℝ (Fin m), X)) :
+    cone p α (stdSimplex.vertex 0) = p :=
+  stdSimplex.cone_apply_of_eq_one _ _ _ (by simp)
+
+@[simp]
+lemma stdSimplex.cone_vertex_succ {m : ℕ} (p : X) (α : C(stdSimplex ℝ (Fin m), X)) (i : Fin m) :
+    cone p α (stdSimplex.vertex i.succ) = α (stdSimplex.vertex i) := by
+  rw [stdSimplex.cone_apply (σ' := stdSimplex.vertex i) (H := by ext; simp [Pi.single_apply])]
+  simp
+
+lemma stdSimplex.cone_vertex {m : ℕ} (p : X) (α : C(stdSimplex ℝ (Fin m), X)) (i : Fin (m + 1)) :
+    cone p α (stdSimplex.vertex i) = if h : i = 0 then p else α (stdSimplex.vertex (i.pred h)) := by
+  split
+  · simp [*]
+  · conv_rhs => rw [← stdSimplex.cone_vertex_succ p, Fin.succ_pred]
+
+noncomputable def stdSimplex.isAffineMap_cone {m : ℕ} (p : X) (α : C(stdSimplex ℝ (Fin m), X))
     (H : IsAffineMap ℝ α) : IsAffineMap ℝ (cone p α) := by
   classical
   refine ⟨fun s ↦ ?_⟩
@@ -163,8 +180,8 @@ noncomputable def stdSimplex.isAffine_cone {m : ℕ} (p : X) (α : C(stdSimplex 
   rw [(StdSimplex.isAffineMap_weights ..).map_iConvexCombo,
     (StdSimplex.isAffineMap_weights ..).map_convexComboPair, convexComboPair_eq_add]
   suffices s.weights.sum (fun i r ↦ r • (StdSimplex.duple p
-        (if h : i 0 = 1 then p else α (proj i h)) (s := i 0) (t := 1 - i 0) sorry sorry
-          sorry).weights) =
+        (if h : i 0 = 1 then p else α (proj i h)) (s := i 0) (t := 1 - i 0) (by simp) (by simp)
+          (by simp)).weights) =
       Finsupp.single p (s.sConvexCombo 0) +
         (1 - s.sConvexCombo 0) • (projStdSimplex s hs0).weights.mapDomain α by
     simpa [Function.comp_def, ← StdSimplex.mk_single, StdSimplex.map,
@@ -189,5 +206,15 @@ noncomputable def stdSimplex.isAffine_cone {m : ℕ} (p : X) (α : C(stdSimplex 
       · ext ⟨x, hx⟩; simp_all
       · simp [x.2, mul_comm]
     · simp_all
+
+noncomputable def stdSimplex.isAffineMap_map {I J : Type*} [Fintype I] [Fintype J] (f : I → J) :
+    IsAffineMap ℝ (stdSimplex.map (S := ℝ) f) := by
+  classical
+  refine ⟨fun s ↦ ?_⟩
+  ext i
+  simp_rw [stdSimplex.map_coe, FunOnFinite.linearMap_apply_apply,
+    stdSimplex.sConvexCombo_apply, ← iConvexCombo.eq_def, iConvexCombo_map, iConvexCombo_eq_sum,
+    Finsupp.sum, ← s.weights.support.sum_comm, ← Finset.smul_sum]
+  simp [FunOnFinite.linearMap_apply_apply]
 
 end Convexity

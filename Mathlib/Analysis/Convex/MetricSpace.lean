@@ -38,12 +38,29 @@ that has little to do with this definition.
 @[expose] public section
 
 namespace NNReal
+
 variable {ι M : Type*} [AddCommMonoid M]
 
 @[simp] lemma coe_finsuppSum (f : ι →₀ M) (g : ι → M → ℝ≥0) :
     (f.sum g).toReal = f.sum (fun i m ↦ (g i m).toReal) := NNReal.coe_sum ..
 
 end NNReal
+
+-- namespace Real
+
+-- variable {ι M : Type*} [AddCommMonoid M]
+
+-- @[simp] lemma toNNReal_sum (s : Finset ι) (f : ι → ℝ) (hf : ∀ i ∈ s, 0 ≤ f i) :
+--     (∑ i ∈ s, f i).toNNReal = ∑ i ∈ s, (f i).toNNReal := by
+--   ext; simp +contextual [Finset.sum_nonneg hf, hf]
+
+-- @[simp] lemma toNNReal_finsuppSum (f : ι →₀ M) (g : ι → M → ℝ)
+--     (hg : ∀ i ∈ f.support, 0 ≤ g i (f i)) :
+--     (f.sum g).toNNReal = f.sum (fun i m ↦ (g i m).toNNReal) :=
+--   toNNReal_sum _ _ hg
+
+
+-- end Real
 
 namespace Convexity
 
@@ -114,6 +131,20 @@ lemma nndist_iConvexCombo_left_le (f : StdSimplex ℝ I) (g : I → X) (x : X) :
   gcongr with i x
   have := f.nonneg i
   simp_all
+
+lemma StdSimplex.weights_nonneg (f : StdSimplex ℝ I) (i : I) : 0 ≤ f.weights i := f.nonneg i
+
+lemma nndist_iConvexCombo_left_le_sup (f : StdSimplex ℝ I) (g : I → X) (x : X) :
+    nndist (f.iConvexCombo g) x ≤ f.weights.support.sup fun i ↦ nndist (g i) x := by
+  trans f.weights.sum fun i r ↦ r.toNNReal * f.weights.support.sup fun i ↦ nndist (g i) x
+  · grw [nndist_iConvexCombo_left_le]; gcongr with i hi; exact Finset.le_sup_of_le hi le_rfl
+  · have : f.weights.sum (fun i m ↦ max m 0) = 1 := by
+      rw [f.weights.sum_congr (g2 := fun _ x ↦ x)] <;> simp [f.weights_nonneg]
+    simp [← Finsupp.sum_mul, ← NNReal.coe_le_coe, this]
+
+lemma nndist_iConvexCombo_right_le_sup (f : StdSimplex ℝ I) (g : I → X) (x : X) :
+    nndist x (f.iConvexCombo g) ≤ f.weights.support.sup fun i ↦ nndist x (g i) := by
+  simpa [nndist_comm x] using nndist_iConvexCombo_left_le_sup f g x
 
 lemma nndist_iConvexCombo_right_le (f : StdSimplex ℝ I) (g : I → X) (x : X) :
     nndist x (f.iConvexCombo g) ≤ f.weights.sum fun i r ↦ r.toNNReal * nndist x (g i) := by

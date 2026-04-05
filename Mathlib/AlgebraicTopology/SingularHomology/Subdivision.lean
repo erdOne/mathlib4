@@ -3,7 +3,7 @@ module
 public import Mathlib.Algebra.Category.Grp.Abelian
 public import Mathlib.Algebra.Category.Grp.EpiMono
 public import Mathlib.Algebra.Homology.Functor
-public import Mathlib.AlgebraicTopology.SingularHomology.BarycentricSubdivision
+public import Mathlib.AlgebraicTopology.SingularHomology.SubdivisionDiameter
 public import Mathlib.AlgebraicTopology.SingularHomology.Stuff
 public import Mathlib.Analysis.Convex.Contractible
 public import Mathlib.CategoryTheory.Abelian.Projective.Resolution
@@ -17,31 +17,7 @@ namespace Convexity.StdSimplex
 variable (𝕜 ι : Type*) [Semifield 𝕜] [PartialOrder 𝕜] [PosMulReflectLT 𝕜] [IsOrderedRing 𝕜]
   [Fintype ι] [CharZero 𝕜] [Nonempty ι]
 
-@[simps]
-def barycenter : StdSimplex 𝕜 ι where
-  weights.support := .univ
-  weights.toFun _ := (Fintype.card ι : 𝕜)⁻¹
-  weights.mem_support_toFun _ := by simp
-  nonneg _ := by simp
-  total := by simp [Finsupp.sum]
-
 end Convexity.StdSimplex
-
-@[simp]
-lemma Fin.castSucc_eq_zero {n} {i : Fin n} : i.castSucc = 0 ↔ i.1 = 0 := by
-  simp [← Fin.val_eq_zero_iff]
-
-@[simp]
-lemma Fin.succAbove_eq_zero {n} {i : Fin (n + 1)} {j : Fin n} :
-    i.succAbove j = 0 ↔ i ≠ 0 ∧ j.1 = 0 := by
-  delta Fin.succAbove
-  split_ifs
-  · simp; grind
-  · simp_all [Fin.le_iff_val_le_val]; grind
-
-lemma Fin.succAbove_eq_iff {n} {i k : Fin (n + 1)} {j : Fin n} :
-    i.succAbove j = k ↔ if i.1 ≤ j.1 then j.1 + 1 = k.1 else j.1 = k.1 := by
-  delta Fin.succAbove; grind [Fin.lt_def]
 
 open Convexity
 
@@ -64,44 +40,15 @@ open HomologicalComplex (eval)
 
 local notation3 "Δₜ[" n "]" => SimplexCategory.toTop.obj ⦋n⦌
 
-@[simp]
-lemma stdSimplex.coe_apply (𝕜 ι : Type*) [Semiring 𝕜] [PartialOrder 𝕜] [Fintype ι]
-    (σ : stdSimplex 𝕜 ι) (i : ι) : σ.1 i = σ i := rfl
-
-@[simp]
-lemma stdSimplex.mk_apply (𝕜 ι : Type*) [Semiring 𝕜] [PartialOrder 𝕜] [Fintype ι]
-    (σ) (hσ : σ ∈ stdSimplex 𝕜 ι) (i : ι) :
-  (Subtype.mk σ hσ) i = σ i := rfl
-
 section
 variable (𝕜 ι : Type*) [Field 𝕜] [PartialOrder 𝕜]
   [PosMulReflectLT 𝕜] [IsOrderedRing 𝕜] [Fintype ι] [CharZero 𝕜] [Nonempty ι]
 
-@[simps]
-def stdSimplex.barycenter : stdSimplex 𝕜 ι := ⟨fun _ ↦ (Fintype.card ι : 𝕜)⁻¹, by simp, by simp⟩
-
 variable [DecidableEq ι]
-
-lemma stdSimplex.iConvexCombo_barycenter :
-    StdSimplex.iConvexCombo (.barycenter ℝ ι) stdSimplex.vertex = stdSimplex.barycenter ℝ ι := by
-  ext
-  simp [StdSimplex.iConvexCombo, StdSimplex.barycenter, stdSimplex.barycenter, -coe_apply,
-    stdSimplex.coe_def, sConvexCombo_eq_sum, StdSimplex.map, add_smul,
-    Finsupp.sum_mapDomain_index, Finsupp.sum_fintype, Pi.single_apply]
 
 variable {X : Type*}
 
 open stdSimplex StdSimplex
-
-lemma dist_barycenter_left_le (x : stdSimplex ℝ ι) :
-    dist (stdSimplex.barycenter ℝ ι) x ≤
-      ∑ i, (Fintype.card ι : ℝ)⁻¹ * dist (stdSimplex.vertex i) x := by
-  simpa [← iConvexCombo_barycenter] using dist_iConvexCombo_left_le ..
-
-lemma dist_barycenter_right_le (x : stdSimplex ℝ ι) :
-    dist x (stdSimplex.barycenter ℝ ι) ≤
-      ∑ i, (Fintype.card ι : ℝ)⁻¹ * dist x (stdSimplex.vertex i) := by
-  simpa [← iConvexCombo_barycenter] using dist_iConvexCombo_right_le ..
 
 end
 
@@ -849,106 +796,12 @@ def AddCommGrpCat.sigmaConstIso (X : Ab.{u}) (σ : Type u) :
 
 noncomputable
 def singularChainComplexFunctor.Chain.mk {M : Ab.{u}} {X : TopCat.{u}} :
-    .of (TopCat.toSSet.obj X _⦋n⦌ →₀ M) ≅ (((singularChainComplexFunctor _).obj M).obj X).X n :=
-  (AddCommGrpCat.sigmaConstIso ..).symm
+    .of (C(stdSimplex ℝ (Fin (n + 1)), X) →₀ M) ≅
+      (((singularChainComplexFunctor _).obj M).obj X).X n :=
+  (Finsupp.domLCongr (R := ℤ) (TopCat.toSSetObjEquiv _ _).symm).toAddCommGrpIso ≪≫
+    (AddCommGrpCat.sigmaConstIso ..).symm
 
 open singularChainComplexFunctor.Chain
-
-noncomputable
-def boundary {M : Ab.{u}} {X : Type*} [TopologicalSpace X] {n : ℕ} :
-    (C(stdSimplex ℝ (Fin (n + 1)), X) →₀ M) →+ (C(stdSimplex ℝ (Fin n), X) →₀ M) :=
-  Finsupp.liftAddHom fun σ ↦ ∑ i : Fin (n + 1),
-    (-1) ^ i.1 • Finsupp.singleAddHom (σ.comp ⟨_, stdSimplex.continuous_map (Fin.succAbove i)⟩)
-
-variable {M : Ab} {X : Type u} [MetricSpace X]
-
-noncomputable
-def diam (σ : C(stdSimplex ℝ (Fin n), X) →₀ M) : NNReal :=
-  σ.support.sup fun α ↦ Finset.univ.sup fun ij : Fin n × Fin n ↦
-    nndist (α (stdSimplex.vertex ij.1)) (α (stdSimplex.vertex ij.2))
-
-lemma nndist_le_diam {σ : C(stdSimplex ℝ (Fin n), X) →₀ M} {α : C(stdSimplex ℝ (Fin n), X)}
-    (hα : α ∈ σ.support) {i j : Fin n} :
-    nndist (α (stdSimplex.vertex i)) (α (stdSimplex.vertex j)) ≤ diam σ :=
-  Finset.le_sup_of_le hα <| Finset.le_sup_of_le (Finset.mem_univ (i, j)) le_rfl
-
-@[simp] lemma diam_zero : diam (0 : C(stdSimplex ℝ (Fin n), X) →₀ M) = 0 := by simp [diam]
-
-lemma diam_add_le (σ τ : C(stdSimplex ℝ (Fin n), X) →₀ M) : diam (σ + τ) ≤ diam σ ⊔ diam τ := by
-  classical unfold diam; grw [Finsupp.support_add, Finset.sup_union]
-
-lemma diam_add {σ τ : C(stdSimplex ℝ (Fin n), X) →₀ M} (h : Disjoint σ.support τ.support) :
-    diam (σ + τ) = diam σ ⊔ diam τ := by
-  classical unfold diam; rw [Finsupp.support_add_eq h, Finset.sup_union]
-
-lemma diam_boundary_le (σ : C(stdSimplex ℝ (Fin (n + 1)), X) →₀ M) :
-    diam (boundary σ) ≤ diam σ := by
-  classical
-  simp only [diam, boundary, Int.reduceNeg, Finsupp.liftAddHom_apply]
-  grw [Finsupp.support_sum, Finset.sup_biUnion]
-  gcongr with α hα
-  simp only [Int.reduceNeg, AddMonoidHom.finset_sum_apply, AddMonoidHom.smul_apply,
-    Finsupp.singleAddHom_apply, Finsupp.smul_single]
-  grw [Finsupp.support_finset_sum, Finset.sup_biUnion]
-  simp only [Finset.sup_le_iff, Finset.mem_univ, Finsupp.mem_support_iff,
-    Finsupp.single_apply, ne_eq, ite_eq_right_iff, Classical.not_imp, forall_const, Prod.forall,
-    and_imp, forall_eq', ContinuousMap.comp_apply, ContinuousMap.coe_mk, stdSimplex.map_vertex]
-  rintro i - j k
-  exact Finset.le_sup_of_le (Finset.mem_univ (_, _)) le_rfl
-
-variable [ConvexSpace ℝ X] [ConvexSpace.IsMetricCompatible X] [BoundedSpace X]
-
-noncomputable
-def bary : ∀ ⦃n⦄,
-    (C(stdSimplex ℝ (Fin n), X) →₀ M) →+ (C(stdSimplex ℝ (Fin n), X) →₀ M) :=
-  Nat.rec (.id _) fun _ α ↦ Finsupp.liftAddHom fun σ ↦
-    .comp (.comp (.comp (Finsupp.lmapDomain _ ℤ (stdSimplex.cone (σ
-      (stdSimplex.barycenter _ _)))).toAddMonoidHom α) boundary) (Finsupp.singleAddHom σ)
-
-lemma diam_bary_single (α : C(stdSimplex ℝ (Fin (n + 1)), X)) {m : M} (hm : m ≠ 0) :
-    diam (bary (.single α m)) =
-      Finset.univ.sup
-        (fun i ↦ nndist (α <| stdSimplex.vertex i) (α <| stdSimplex.barycenter ..)) ⊔
-        diam (bary (boundary (.single α m))) := by
-  sorry
-
-example (σ : C(stdSimplex ℝ (Fin n), X) →₀ M) (hσ : ∀ α ∈ σ.support, IsAffineMap ℝ α) :
-    diam (bary σ) ≤ ((n - 1) / n) * diam σ := by
-  induction n with
-  | zero => simp [bary, diam, ← bot_eq_zero (α := NNReal), -bot_eq_zero']
-  | succ n ihn =>
-  induction σ using Finsupp.induction with
-  | zero => simp
-  | single_add α m σ hα hm ihσ =>
-  classical
-  rw [Finsupp.support_add_eq (by simp [*])] at hσ
-  simp only [ne_eq, hm, not_false_eq_true, Finsupp.support_single_ne_zero, Finset.singleton_union,
-    Finset.mem_insert, Finsupp.mem_support_iff, or_imp, forall_and, forall_eq] at hσ ihn ihσ
-  grw [map_add, diam_add_le, diam_add (by simp [*]), mul_max, diam_bary_single _ hm, ihn, ihσ hσ.2,
-    diam_boundary_le]
-  · gcongr
-    simp only [Nat.cast_add, Nat.cast_one, sup_le_iff, Finset.sup_le_iff, Finset.mem_univ,
-      forall_const]
-    refine ⟨fun i ↦ ?_, by cases n; (· simp); gcongr ?_ * _; field_simp; simp [mul_add, add_mul]⟩
-    grw [← stdSimplex.iConvexCombo_barycenter, hσ.1.map_iConvexCombo, nndist_iConvexCombo_right_le]
-    simp [Finsupp.sum, Real.toNNReal_inv, ← Finset.mul_sum]
-    field_simp
-    grw [← Finset.sum_erase _ (a := i) (by simp)]
-    convert Finset.sum_le_card_nsmul _ _ (diam <| .single α m) fun i _ ↦ ?_ using 1
-    · simp
-    · exact nndist_le_diam (by simpa)
-  sorry
-
--- noncomputable
--- def singularChainComplexFunctor.Chain.δ {M : Ab.{u}} {X : TopCat.{u}} :
---     (TopCat.toSSet.obj X _⦋n + 1⦌ →₀ M) →+ (TopCat.toSSet.obj X _⦋n⦌ →₀ M) := sorry
-
--- lemma foo (M : Ab) {X : Type*} [MetricSpace X] [ConvexSpace ℝ X] [IsConvexMetricSpace X]
---     (σ : TopCat.toSSet.obj (.of X) _⦋n + 1⦌ →₀ M) :
---     ((singularChainComplexSubdivision.app M).app (.of X)).f _ (mk.hom.hom σ) =
---       mk.hom.hom ((δ σ).mapDomain _) := by
---   sorry
-
 end foo
 
 end AlgebraicTopology

@@ -41,8 +41,6 @@ that has little to do with this definition.
 
 public section
 
-namespace Convexity
-
 namespace NNReal
 
 variable {ι M : Type*} [AddCommMonoid M]

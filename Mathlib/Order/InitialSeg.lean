@@ -64,7 +64,7 @@ structure InitialSeg {α β : Type*} (r : α → α → Prop) (s : β → β →
 scoped[InitialSeg] infixl:25 " ≼i " => InitialSeg
 
 /-- An `InitialSeg` between the `<` relations of two types. -/
-notation:25 α:24 " ≤i " β:25 => @InitialSeg α β (· < ·) (· < ·)
+notation3:25 α:24 " ≤i " β:25 => @InitialSeg α β (· < ·) (· < ·)
 
 namespace InitialSeg
 
@@ -251,7 +251,7 @@ structure PrincipalSeg {α β : Type*} (r : α → α → Prop) (s : β → β �
 scoped[InitialSeg] infixl:25 " ≺i " => PrincipalSeg
 
 /-- A `PrincipalSeg` between the `<` relations of two types. -/
-notation:25 α:24 " <i " β:25 => @PrincipalSeg α β (· < ·) (· < ·)
+notation3:25 α:24 " <i " β:25 => @PrincipalSeg α β (· < ·) (· < ·)
 
 open scoped InitialSeg
 
@@ -287,6 +287,9 @@ theorem coe_fn_mk (f : r ↪r s) (t o) : (@PrincipalSeg.mk _ _ r s f t o : α �
 
 theorem mem_range_iff_rel (f : r ≺i s) : ∀ {b : β}, b ∈ Set.range f ↔ s b f.top :=
   f.mem_range_iff_rel' _
+
+theorem range_eq (f : r ≺i s) : Set.range f = {b | s b f.top} :=
+  Set.ext_iff.2 fun _ ↦ mem_range_iff_rel f
 
 theorem lt_top (f : r ≺i s) (a : α) : s (f a) f.top :=
   f.mem_range_iff_rel.1 ⟨_, rfl⟩
@@ -638,6 +641,9 @@ variable [PartialOrder β] {a a' : α} {b : β}
 
 theorem mem_range_of_le [LT α] (f : α <i β) (h : b ≤ f a) : b ∈ Set.range f :=
   (f : α ≤i β).mem_range_of_le h
+
+theorem range_eq_Iio [LT α] (f : α <i β) : Set.range f = Set.Iio f.top :=
+  f.range_eq
 
 theorem isLowerSet_range [LT α] (f : α <i β) : IsLowerSet (Set.range f) :=
   (f : α ≤i β).isLowerSet_range
